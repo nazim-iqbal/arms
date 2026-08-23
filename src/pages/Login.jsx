@@ -35,12 +35,15 @@ export default function Login() {
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-[#4facfe]/20 rounded-full blur-[120px] translate-x-1/2 translate-y-1/2" />
       
       <div className="glass-panel w-full max-w-md p-10 relative z-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
-        <div className="flex flex-col items-center mb-10 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-4 shadow-[0_0_30px_rgba(0,242,254,0.3)]">
-            <CarFront size={32} className="text-[#00f2fe]" />
+        <div className="flex flex-col items-center mb-8 text-center">
+          <div className="text-6xl mb-4 drop-shadow-[0_0_15px_rgba(0,242,254,0.5)]">
+            🛺
           </div>
-          <h2 className="text-3xl font-bold text-white mb-2">ARMS Login</h2>
-          <p className="text-white/60">Enter your credentials to access the dashboard</p>
+          <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#00f2fe] to-[#4facfe] mb-1 tracking-wider">ARMS</h1>
+          <h2 className="text-sm font-semibold text-white/80 uppercase tracking-widest mb-3">Auto Rickshaw Management System</h2>
+          <p className="text-[#10B981] font-bold text-lg italic mb-6">"হিসাব এখন হাতের মুঠোয়"</p>
+          
+          <h3 className="text-2xl font-bold text-white mb-2">Login</h3>
         </div>
 
         {error && (
@@ -92,6 +95,13 @@ export default function Login() {
             )}
           </button>
         </form>
+      </div>
+
+      {/* Footer */}
+      <div className="absolute bottom-6 w-full text-center z-10">
+        <p className="text-white/40 text-sm font-mono tracking-widest">
+          &lt;/&gt; Developed By :: Nazim Iqbal ::
+        </p>
       </div>
     </div>
   );
