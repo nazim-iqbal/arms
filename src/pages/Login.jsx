@@ -36,7 +36,7 @@ export default function Login() {
       
       <div className="glass-panel w-full max-w-md p-10 relative z-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
         <div className="flex flex-col items-center mb-8 text-center">
-          <div className="text-6xl mb-4 drop-shadow-[0_0_15px_rgba(0,242,254,0.5)]">
+          <div className="text-8xl mb-6 drop-shadow-[0_0_20px_rgba(0,242,254,0.6)] hover:scale-110 transition-transform cursor-default">
             🛺
           </div>
           <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#00f2fe] to-[#4facfe] mb-1 tracking-wider">ARMS</h1>
@@ -98,8 +98,8 @@ export default function Login() {
       </div>
 
       {/* Footer */}
-      <div className="absolute bottom-6 w-full text-center z-10">
-        <p className="text-white/40 text-sm font-mono tracking-widest">
+      <div className="absolute bottom-8 w-full text-center z-10">
+        <p className="text-white/70 text-lg md:text-xl font-bold font-mono tracking-widest drop-shadow-[0_0_10px_rgba(0,242,254,0.3)]">
           &lt;/&gt; Developed By :: Nazim Iqbal ::
         </p>
       </div>
