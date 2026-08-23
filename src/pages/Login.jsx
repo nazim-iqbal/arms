@@ -34,9 +34,31 @@ export default function Login() {
       <div className="absolute top-0 left-0 w-96 h-96 bg-[#00f2fe]/20 rounded-full blur-[120px] -translate-x-1/2 -translate-y-1/2" />
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-[#4facfe]/20 rounded-full blur-[120px] translate-x-1/2 translate-y-1/2" />
       
-      <div className="glass-panel w-full max-w-4xl p-0 relative z-10 animate-in fade-in slide-in-from-bottom-8 duration-700 flex flex-col-reverse md:flex-row overflow-hidden">
+      <div className="glass-panel w-full max-w-4xl p-0 relative z-10 animate-in fade-in slide-in-from-bottom-8 duration-700 flex flex-col md:flex-row overflow-hidden">
         
-        {/* LEFT COLUMN: Login Form */}
+        {/* LEFT COLUMN: Logo & Info */}
+        <div className="w-full md:w-1/2 p-10 lg:p-12 bg-white/5 border-b md:border-b-0 md:border-r border-white/10 flex flex-col items-center justify-center text-center relative">
+          {/* Subtle background glow inside left column */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-[#00f2fe]/10 rounded-full blur-[80px]" />
+          
+          <div className="relative z-10 flex flex-col items-center">
+            <div className="text-8xl md:text-9xl mb-6 drop-shadow-[0_0_20px_rgba(0,242,254,0.6)] hover:scale-110 transition-transform duration-500 cursor-default">
+              🛺
+            </div>
+            <h1 className="text-5xl lg:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#00f2fe] to-[#4facfe] mb-2 tracking-wider">
+              ARMS
+            </h1>
+            <h2 className="text-sm lg:text-base font-bold text-white/80 uppercase tracking-widest mb-4">
+              Auto Rickshaw Management System
+            </h2>
+            <div className="w-16 h-1 bg-gradient-to-r from-[#00f2fe] to-transparent mb-6 rounded-full" />
+            <p className="text-[#10B981] font-bold text-xl md:text-2xl italic tracking-wide font-['Hind_Siliguri']">
+              "হিসাব এখন হাতের মুঠোয়"
+            </p>
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN: Login Form */}
         <div className="w-full md:w-1/2 p-10 lg:p-12 flex flex-col justify-center">
           <h3 className="text-3xl font-bold text-white mb-2">Welcome Back</h3>
           <p className="text-white/60 mb-8">Please enter your details to sign in.</p>
@@ -90,28 +112,6 @@ export default function Login() {
               )}
             </button>
           </form>
-        </div>
-
-        {/* RIGHT COLUMN: Logo & Info */}
-        <div className="w-full md:w-1/2 p-10 lg:p-12 bg-white/5 border-b md:border-b-0 md:border-l border-white/10 flex flex-col items-center justify-center text-center relative">
-          {/* Subtle background glow inside right column */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-[#00f2fe]/10 rounded-full blur-[80px]" />
-          
-          <div className="relative z-10 flex flex-col items-center">
-            <div className="text-8xl md:text-9xl mb-6 drop-shadow-[0_0_20px_rgba(0,242,254,0.6)] hover:scale-110 transition-transform duration-500 cursor-default">
-              🛺
-            </div>
-            <h1 className="text-5xl lg:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#00f2fe] to-[#4facfe] mb-2 tracking-wider">
-              ARMS
-            </h1>
-            <h2 className="text-sm lg:text-base font-bold text-white/80 uppercase tracking-widest mb-4">
-              Auto Rickshaw Management System
-            </h2>
-            <div className="w-16 h-1 bg-gradient-to-r from-[#00f2fe] to-transparent mb-6 rounded-full" />
-            <p className="text-[#10B981] font-bold text-xl md:text-2xl italic tracking-wide">
-              "হিসাব এখন হাতের মুঠোয়"
-            </p>
-          </div>
         </div>
 
       </div>
