@@ -74,7 +74,7 @@ export default function Login() {
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">Email Address</label>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" size={20} />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-[#00f2fe]" size={20} />
                 <input 
                   type="email" 
                   className="form-input pl-12 bg-black/20" 
@@ -89,7 +89,7 @@ export default function Login() {
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">Password</label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" size={20} />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-[#00f2fe]" size={20} />
                 <input 
                   type={showPassword ? "text" : "password"} 
                   className="form-input pl-12 pr-12 bg-black/20" 
