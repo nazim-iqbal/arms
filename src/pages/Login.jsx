@@ -74,7 +74,7 @@ export default function Login() {
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">Email Address</label>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-[#00f2fe]" size={20} />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-[#10B981]" size={20} />
                 <input 
                   type="email" 
                   className="form-input pl-12 bg-black/20" 
@@ -89,7 +89,7 @@ export default function Login() {
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">Password</label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-[#00f2fe]" size={20} />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-[#10B981]" size={20} />
                 <input 
                   type={showPassword ? "text" : "password"} 
                   className="form-input pl-12 pr-12 bg-black/20" 
@@ -100,7 +100,7 @@ export default function Login() {
                 />
                 <button
                   type="button"
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#00f2fe] hover:text-[#4facfe] transition-colors z-10 cursor-pointer p-2 drop-shadow-[0_0_5px_rgba(0,242,254,0.5)]"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#10B981] hover:text-[#059669] transition-colors z-10 cursor-pointer p-2 drop-shadow-[0_0_5px_rgba(16,185,129,0.5)]"
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
