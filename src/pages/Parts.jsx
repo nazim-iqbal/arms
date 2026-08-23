@@ -21,13 +21,13 @@ export default function Parts() {
   async function fetchData() {
     try {
       setLoading(true);
-      const { data: rData, error: rError } = await supabase.from('rickshaws').select('id, registration_number');
+      const { data: rData, error: rError } = await supabase.from('rickshaws').select('id, registration_number, identity_no');
       if (rError) throw rError;
       setRickshaws(rData || []);
 
       const { data: tData, error: tError } = await supabase
         .from('parts_transactions')
-        .select(`*, rickshaws(registration_number)`)
+        .select(`*, rickshaws(registration_number, identity_no)`)
         .order('transaction_date', { ascending: false });
       
       if (tError) throw tError;
@@ -53,7 +53,7 @@ export default function Parts() {
           amount: parseFloat(amount), 
           transaction_date: date 
         }])
-        .select(`*, rickshaws(registration_number)`);
+        .select(`*, rickshaws(registration_number, identity_no)`);
 
       if (error) throw error;
       setTransactions([data[0], ...transactions]);
@@ -109,7 +109,11 @@ export default function Parts() {
             <label className="form-label">রিক্সা/অটো নির্বাচন করুন (যদি নির্দিষ্ট রিক্সা/অটোর জন্য হয়)</label>
             <select className="form-input" value={rickshawId} onChange={(e) => setRickshawId(e.target.value)}>
               <option value="">-- রিক্সা/অটো সিলেক্ট করুন --</option>
-              {rickshaws.map(r => <option key={r.id} value={r.id}>{r.registration_number}</option>)}
+              {rickshaws.map(r => (
+                <option key={r.id} value={r.id}>
+                  {r.identity_no ? `[ID: ${r.identity_no}] ` : ''}{r.registration_number}
+                </option>
+              ))}
             </select>
           </div>
           
@@ -161,7 +165,7 @@ export default function Parts() {
                   
                   {t.rickshaws?.registration_number && (
                     <div className="flex items-center gap-2 text-sm mt-1">
-                      <CarFront size={14} /> {t.rickshaws.registration_number}
+                      <CarFront size={14} /> {t.rickshaws.identity_no ? `[ID: ${t.rickshaws.identity_no}] ` : ''}{t.rickshaws.registration_number}
                     </div>
                   )}
                   <div className="text-sm">তারিখ: {t.transaction_date}</div>

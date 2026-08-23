@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Users, CarFront, DollarSign, Wrench, Menu, X, LogOut, Shield } from 'lucide-react';
+import { LayoutDashboard, Users, CarFront, DollarSign, Wrench, Menu, X, LogOut, Shield, PiggyBank, UserCheck } from 'lucide-react';
 import './index.css';
 
 import Rickshaws from './pages/Rickshaws';
@@ -10,6 +10,8 @@ import Dashboard from './pages/Dashboard';
 import Parts from './pages/Parts';
 import Login from './pages/Login';
 import UsersPage from './pages/Users';
+import SetDailyDeposit from './pages/SetDailyDeposit';
+import AssignDriverVehicle from './pages/AssignDriverVehicle';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
@@ -37,8 +39,10 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         
         <nav className="flex flex-col gap-2 flex-1">
           <Link onClick={() => setIsOpen(false)} to="/" className="btn btn-secondary !justify-start !border-none !bg-transparent opacity-70 hover:opacity-100 hover:!bg-gradient-to-r hover:from-white/10 hover:to-transparent hover:border-l-4 hover:border-l-[#00f2fe]"><LayoutDashboard size={18}/> Dashboard</Link>
-          <Link onClick={() => setIsOpen(false)} to="/rickshaws" className="btn btn-secondary !justify-start !border-none !bg-transparent opacity-70 hover:opacity-100 hover:!bg-gradient-to-r hover:from-white/10 hover:to-transparent hover:border-l-4 hover:border-l-[#00f2fe]"><CarFront size={18}/> Rickshaws/Autos</Link>
+          <Link onClick={() => setIsOpen(false)} to="/rickshaws" className="btn btn-secondary !justify-start !border-none !bg-transparent opacity-70 hover:opacity-100 hover:!bg-gradient-to-r hover:from-white/10 hover:to-transparent hover:border-l-4 hover:border-l-[#00f2fe]"><CarFront size={18}/> New Vehicle Entry</Link>
+          <Link onClick={() => setIsOpen(false)} to="/daily-deposits" className="btn btn-secondary !justify-start !border-none !bg-transparent opacity-70 hover:opacity-100 hover:!bg-gradient-to-r hover:from-white/10 hover:to-transparent hover:border-l-4 hover:border-l-[#00f2fe]"><PiggyBank size={18}/> Set Daily Deposit</Link>
           <Link onClick={() => setIsOpen(false)} to="/drivers" className="btn btn-secondary !justify-start !border-none !bg-transparent opacity-70 hover:opacity-100 hover:!bg-gradient-to-r hover:from-white/10 hover:to-transparent hover:border-l-4 hover:border-l-[#00f2fe]"><Users size={18}/> Drivers</Link>
+          <Link onClick={() => setIsOpen(false)} to="/assign-driver-vehicle" className="btn btn-secondary !justify-start !border-none !bg-transparent opacity-70 hover:opacity-100 hover:!bg-gradient-to-r hover:from-white/10 hover:to-transparent hover:border-l-4 hover:border-l-[#00f2fe]"><UserCheck size={18}/> Assign Driver with Vehicle</Link>
           <Link onClick={() => setIsOpen(false)} to="/finances" className="btn btn-secondary !justify-start !border-none !bg-transparent opacity-70 hover:opacity-100 hover:!bg-gradient-to-r hover:from-white/10 hover:to-transparent hover:border-l-4 hover:border-l-[#00f2fe]"><DollarSign size={18}/> Finances</Link>
           <Link onClick={() => setIsOpen(false)} to="/parts" className="btn btn-secondary !justify-start !border-none !bg-transparent opacity-70 hover:opacity-100 hover:!bg-gradient-to-r hover:from-white/10 hover:to-transparent hover:border-l-4 hover:border-l-[#00f2fe]"><Wrench size={18}/> Parts</Link>
           
@@ -99,7 +103,9 @@ function App() {
           <Route element={<ProtectedLayout />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/rickshaws" element={<Rickshaws />} />
+            <Route path="/daily-deposits" element={<SetDailyDeposit />} />
             <Route path="/drivers" element={<Drivers />} />
+            <Route path="/assign-driver-vehicle" element={<AssignDriverVehicle />} />
             <Route path="/finances" element={<Finances />} />
             <Route path="/parts" element={<Parts />} />
             <Route path="/users" element={<UsersPage />} />

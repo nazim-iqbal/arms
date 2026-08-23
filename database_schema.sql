@@ -9,6 +9,7 @@ CREATE TABLE public.users (
 -- Rickshaws table
 CREATE TABLE public.rickshaws (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    identity_no TEXT UNIQUE,
     registration_number TEXT UNIQUE NOT NULL,
     status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'maintenance')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
@@ -19,8 +20,16 @@ CREATE TABLE public.drivers (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     rickshaw_id UUID REFERENCES public.rickshaws(id) ON DELETE SET NULL,
     name TEXT NOT NULL,
+    father_name TEXT,
+    mother_name TEXT,
+    dob DATE,
+    nid_no TEXT,
     phone TEXT,
-    address TEXT,
+    photo_url TEXT,
+    permanent_address TEXT,
+    present_address TEXT,
+    special_remarks TEXT,
+    referred_by TEXT,
     joined_date DATE DEFAULT CURRENT_DATE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -56,6 +65,27 @@ CREATE TABLE public.parts_transactions (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- Daily Deposit Settings table
+CREATE TABLE public.daily_deposit_settings (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    rickshaw_id UUID REFERENCES public.rickshaws(id) ON DELETE CASCADE NOT NULL,
+    daily_joma_amount NUMERIC(10, 2) NOT NULL,
+    entry_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive')) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Driver Vehicle Assignments table
+CREATE TABLE public.driver_vehicle_assignments (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    rickshaw_id UUID REFERENCES public.rickshaws(id) ON DELETE CASCADE NOT NULL,
+    driver_id UUID REFERENCES public.drivers(id) ON DELETE CASCADE NOT NULL,
+    assign_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    release_date DATE,
+    status TEXT DEFAULT 'active' CHECK (status IN ('active', 'released')) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- Setup Row Level Security (RLS) - Optional but recommended
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.rickshaws ENABLE ROW LEVEL SECURITY;
@@ -63,6 +93,8 @@ ALTER TABLE public.drivers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.daily_incomes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.daily_expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.parts_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.daily_deposit_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.driver_vehicle_assignments ENABLE ROW LEVEL SECURITY;
 
 -- Create policies (For development, allow all authenticated users)
 CREATE POLICY "Allow authenticated users full access" ON public.users FOR ALL TO authenticated USING (true);
@@ -71,3 +103,5 @@ CREATE POLICY "Allow authenticated users full access" ON public.drivers FOR ALL 
 CREATE POLICY "Allow authenticated users full access" ON public.daily_incomes FOR ALL TO authenticated USING (true);
 CREATE POLICY "Allow authenticated users full access" ON public.daily_expenses FOR ALL TO authenticated USING (true);
 CREATE POLICY "Allow authenticated users full access" ON public.parts_transactions FOR ALL TO authenticated USING (true);
+CREATE POLICY "Allow authenticated users full access" ON public.daily_deposit_settings FOR ALL TO authenticated USING (true);
+CREATE POLICY "Allow authenticated users full access" ON public.driver_vehicle_assignments FOR ALL TO authenticated USING (true);

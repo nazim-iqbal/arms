@@ -6,6 +6,7 @@ export default function Finances() {
   const [incomes, setIncomes] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [rickshaws, setRickshaws] = useState([]);
+  const [depositRates, setDepositRates] = useState([]);
   const [loading, setLoading] = useState(true);
   
   // Tab State
@@ -30,23 +31,30 @@ export default function Finances() {
   async function fetchData() {
     try {
       setLoading(true);
-      const { data: rData, error: rError } = await supabase.from('rickshaws').select('id, registration_number');
+      const { data: rData, error: rError } = await supabase.from('rickshaws').select('id, registration_number, identity_no');
       if (rError) throw rError;
       setRickshaws(rData || []);
 
       const { data: iData, error: iError } = await supabase
         .from('daily_incomes')
-        .select(`*, rickshaws(registration_number)`)
+        .select(`*, rickshaws(registration_number, identity_no)`)
         .order('date', { ascending: false });
       if (iError) throw iError;
       setIncomes(iData || []);
 
       const { data: eData, error: eError } = await supabase
         .from('daily_expenses')
-        .select(`*, rickshaws(registration_number)`)
+        .select(`*, rickshaws(registration_number, identity_no)`)
         .order('date', { ascending: false });
       if (eError) throw eError;
       setExpenses(eData || []);
+
+      // Fetch active daily deposit settings
+      const { data: depData } = await supabase
+        .from('daily_deposit_settings')
+        .select('rickshaw_id, daily_joma_amount')
+        .eq('status', 'active');
+      setDepositRates(depData || []);
 
     } catch (error) {
       alert('Error fetching finance data: ' + error.message);
@@ -63,7 +71,7 @@ export default function Finances() {
       const { data, error } = await supabase
         .from('daily_incomes')
         .insert([{ rickshaw_id: incomeRickshawId || null, amount: parseFloat(incomeAmount), date: incomeDate, income_particulars: incomeParticulars }])
-        .select(`*, rickshaws(registration_number)`);
+        .select(`*, rickshaws(registration_number, identity_no)`);
 
       if (error) throw error;
       setIncomes([data[0], ...incomes]);
@@ -81,7 +89,7 @@ export default function Finances() {
       const { data, error } = await supabase
         .from('daily_expenses')
         .insert([{ rickshaw_id: expenseRickshawId || null, amount: parseFloat(expenseAmount), date: expenseDate, expense_particulars: expenseParticulars }])
-        .select(`*, rickshaws(registration_number)`);
+        .select(`*, rickshaws(registration_number, identity_no)`);
 
       if (error) throw error;
       setExpenses([data[0], ...expenses]);
@@ -139,9 +147,24 @@ export default function Finances() {
             <form onSubmit={addIncome} className="flex flex-col gap-4">
               <div>
                 <label className="form-label">রিক্সা/অটো নির্বাচন করুন</label>
-                <select className="form-input" value={incomeRickshawId} onChange={(e) => setIncomeRickshawId(e.target.value)}>
+                <select 
+                  className="form-input" 
+                  value={incomeRickshawId} 
+                  onChange={(e) => {
+                    const rId = e.target.value;
+                    setIncomeRickshawId(rId);
+                    const rate = depositRates.find(d => d.rickshaw_id === rId);
+                    if (rate?.daily_joma_amount) {
+                      setIncomeAmount(String(rate.daily_joma_amount));
+                    }
+                  }}
+                >
                   <option value="">-- রিক্সা/অটো সিলেক্ট করুন --</option>
-                  {rickshaws.map(r => <option key={r.id} value={r.id}>{r.registration_number}</option>)}
+                  {rickshaws.map(r => (
+                    <option key={r.id} value={r.id}>
+                      {r.identity_no ? `[ID: ${r.identity_no}] ` : ''}{r.registration_number}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>
@@ -182,7 +205,7 @@ export default function Finances() {
                       <div className="font-bold text-[#10B981] text-lg">৳ {income.amount}</div>
                       <div className="text-sm text-white/80 mt-1 font-medium">{income.income_particulars}</div>
                       <div className="text-sm text-white/60 flex items-center gap-2 mt-2">
-                        {income.rickshaws?.registration_number && <><CarFront size={14} className="text-[#00f2fe]" /> {income.rickshaws.registration_number} <span className="opacity-50">|</span></>} 
+                        {income.rickshaws?.registration_number && <><CarFront size={14} className="text-[#00f2fe]" /> {income.rickshaws.identity_no ? `[ID: ${income.rickshaws.identity_no}] ` : ''}{income.rickshaws.registration_number} <span className="opacity-50">|</span></>} 
                         {income.date}
                       </div>
                     </div>
@@ -209,7 +232,11 @@ export default function Finances() {
                 <label className="form-label">রিক্সা/অটো নির্বাচন করুন</label>
                 <select className="form-input" value={expenseRickshawId} onChange={(e) => setExpenseRickshawId(e.target.value)}>
                   <option value="">-- রিক্সা/অটো সিলেক্ট করুন --</option>
-                  {rickshaws.map(r => <option key={r.id} value={r.id}>{r.registration_number}</option>)}
+                  {rickshaws.map(r => (
+                    <option key={r.id} value={r.id}>
+                      {r.identity_no ? `[ID: ${r.identity_no}] ` : ''}{r.registration_number}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -245,7 +272,7 @@ export default function Finances() {
                       <div className="font-bold text-red-400 text-lg">৳ {expense.amount}</div>
                       <div className="text-sm text-white/80 mt-1 font-medium">{expense.expense_particulars}</div>
                       <div className="text-sm text-white/50 flex items-center gap-2 mt-2">
-                        {expense.rickshaws?.registration_number && <><CarFront size={14} className="text-[#00f2fe]" /> {expense.rickshaws.registration_number} <span className="opacity-50">|</span></>} 
+                        {expense.rickshaws?.registration_number && <><CarFront size={14} className="text-[#00f2fe]" /> {expense.rickshaws.identity_no ? `[ID: ${expense.rickshaws.identity_no}] ` : ''}{expense.rickshaws.registration_number} <span className="opacity-50">|</span></>} 
                         {expense.date}
                       </div>
                     </div>
