@@ -38,7 +38,7 @@ export default function Login() {
       <div className="glass-panel w-full max-w-4xl p-0 relative z-10 animate-in fade-in slide-in-from-bottom-8 duration-700 flex flex-col md:flex-row overflow-hidden">
         
         {/* LEFT COLUMN: Logo & Info */}
-        <div className="w-full md:w-3/5 p-10 lg:p-12 bg-white/5 border-b md:border-b-0 md:border-r border-white/10 flex flex-col items-center justify-center text-center relative">
+        <div className="w-full md:w-1/2 p-10 lg:p-12 bg-white/5 border-b md:border-b-0 md:border-r border-white/10 flex flex-col items-center justify-center text-center relative">
           {/* Subtle background glow inside left column */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-[#00f2fe]/10 rounded-full blur-[80px]" />
           
@@ -60,8 +60,8 @@ export default function Login() {
         </div>
 
         {/* RIGHT COLUMN: Login Form */}
-        <div className="w-full md:w-2/5 p-10 lg:p-12 flex flex-col justify-center">
-          <h3 className="text-3xl font-bold text-white mb-2">Welcome to ARMS</h3>
+        <div className="w-full md:w-1/2 p-10 lg:p-12 flex flex-col justify-center">
+          <h3 className="text-2xl lg:text-3xl font-bold text-white mb-2 whitespace-nowrap">Welcome to ARMS</h3>
           <p className="text-white/60 mb-8">Please enter your details to sign in.</p>
 
           {error && (
@@ -100,7 +100,7 @@ export default function Login() {
                 />
                 <button
                   type="button"
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 transition-colors z-10 cursor-pointer p-2"
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
