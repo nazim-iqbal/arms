@@ -83,15 +83,15 @@ export default function Rickshaws() {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div className="flex flex-col gap-8">
       
       {/* Add New Rickshaw Form */}
-      <div className="glass-panel p-8 lg:col-span-1 self-start">
+      <div className="glass-panel p-8 w-full">
         <h3 className="flex items-center gap-2 mb-6 text-[#00f2fe] text-xl font-bold">
           <Plus size={24} /> নতুন রিক্সা/অটো যুক্ত করুন
         </h3>
         
-        <form onSubmit={handlePreview}>
+        <form onSubmit={handlePreview} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
           <div className="form-group">
             <label className="form-label">ধরন (Type)</label>
             <select className="form-input" value={vehicleType} onChange={(e) => setVehicleType(e.target.value)}>
@@ -146,14 +146,16 @@ export default function Rickshaws() {
             </select>
           </div>
           
-          <button type="submit" className="btn btn-primary w-full mt-4">
-            যুক্ত করুন
-          </button>
+          <div className="lg:col-span-3 flex justify-end mt-2">
+            <button type="submit" className="btn btn-primary w-full md:w-auto md:px-12 text-lg">
+              যুক্ত করুন
+            </button>
+          </div>
         </form>
       </div>
 
       {/* Rickshaw List */}
-      <div className="glass-panel p-8 lg:col-span-2">
+      <div className="glass-panel p-8 w-full">
         <h3 className="flex items-center gap-2 mb-6 text-[#00f2fe] text-xl font-bold">
           <CarFront size={24} /> সকল রিক্সা/অটো তালিকা
         </h3>
