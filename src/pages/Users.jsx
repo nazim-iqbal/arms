@@ -1,15 +1,11 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, supabaseUrl, supabaseAnonKey } from '../lib/supabase';
 import { Users as UsersIcon, Shield, User, UserPlus, Trash2, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { createClient } from '@supabase/supabase-js';
 
 // Create a secondary client for signups so it doesn't log the admin out
-const adminAuthClient = supabase; // Fallback, though standard signUp might change session. 
-// Actually, creating a new client is safer:
-import { createClient } from '@supabase/supabase-js';
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const authClient = createClient(supabaseUrl, supabaseKey, {
+const authClient = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: false,
     autoRefreshToken: false,
