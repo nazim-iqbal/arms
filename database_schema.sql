@@ -34,15 +34,22 @@ CREATE TABLE public.drivers (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Daily Incomes table
+-- Daily Incomes table (Deposit Entry)
+-- amount = ক্যাশ জমা (cash received), due_amount = বাকী,
+-- daily_joma_amount = snapshot of the vehicle's daily deposit rate at entry time
 CREATE TABLE public.daily_incomes (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     rickshaw_id UUID REFERENCES public.rickshaws(id) ON DELETE CASCADE,
     date DATE NOT NULL DEFAULT CURRENT_DATE,
     amount NUMERIC(10, 2) NOT NULL,
+    daily_joma_amount NUMERIC(10, 2),
+    due_amount NUMERIC(10, 2) NOT NULL DEFAULT 0,
     income_particulars TEXT,
+    remarks TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+CREATE INDEX idx_daily_incomes_rickshaw_date ON public.daily_incomes (rickshaw_id, date DESC);
 
 -- Daily Expenses table
 CREATE TABLE public.daily_expenses (
@@ -53,6 +60,8 @@ CREATE TABLE public.daily_expenses (
     expense_particulars TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+CREATE INDEX idx_daily_expenses_rickshaw_date ON public.daily_expenses (rickshaw_id, date DESC);
 
 -- Parts Transactions table
 CREATE TABLE public.parts_transactions (

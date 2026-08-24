@@ -113,3 +113,54 @@
     @apply bg-[#1a1a24] text-white;
   }
 }
+
+@layer utilities {
+  /* ---- Login page animations ---- */
+  @keyframes floatY {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-14px); }
+  }
+  @keyframes auroraDrift {
+    0%   { transform: translate(0, 0) scale(1); opacity: .55; }
+    33%  { transform: translate(60px, -40px) scale(1.15); opacity: .8; }
+    66%  { transform: translate(-40px, 40px) scale(.95); opacity: .5; }
+    100% { transform: translate(0, 0) scale(1); opacity: .55; }
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes shimmer {
+    0%   { transform: translateX(-120%) skewX(-20deg); }
+    100% { transform: translateX(320%) skewX(-20deg); }
+  }
+  @keyframes shakeX {
+    0%, 100%     { transform: translateX(0); }
+    20%, 60%     { transform: translateX(-6px); }
+    40%, 80%     { transform: translateX(6px); }
+  }
+  @keyframes gradientPan {
+    0%, 100% { background-position: 0% 50%; }
+    50%      { background-position: 100% 50%; }
+  }
+
+  .animate-float      { animation: floatY 6s ease-in-out infinite; }
+  .animate-aurora     { animation: auroraDrift 18s ease-in-out infinite; }
+  .animate-fade-up    { animation: fadeUp .7s cubic-bezier(.22,1,.36,1) both; }
+  .animate-shimmer    { animation: shimmer 2.8s ease-in-out infinite; }
+  .animate-shake      { animation: shakeX .4s ease-in-out; }
+  .animate-gradient   { background-size: 200% 200%; animation: gradientPan 6s ease infinite; }
+
+  .delay-100 { animation-delay: .1s; }
+  .delay-200 { animation-delay: .2s; }
+  .delay-300 { animation-delay: .3s; }
+  .delay-400 { animation-delay: .4s; }
+  .delay-500 { animation-delay: .5s; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-float,
+    .animate-aurora,
+    .animate-shimmer,
+    .animate-gradient { animation: none; }
+  }
+}
