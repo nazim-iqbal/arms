@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { ArrowDownCircle, Trash2, Plus, Receipt } from 'lucide-react';
-
-const today = () => new Date().toISOString().split('T')[0];
-const bn = (n) => Number(n || 0).toLocaleString('bn-BD');
+import { today, formatDate, bn } from '../lib/date';
 
 export default function ExpenseEntry() {
   const [expenses, setExpenses] = useState([]);
@@ -94,32 +92,32 @@ export default function ExpenseEntry() {
   const todaysExpense = expenses.filter(e => e.date === today()).reduce((s, e) => s + Number(e.amount || 0), 0);
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-3 md:gap-6">
 
       {/* Header Banner */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-red-500/10 via-orange-500/10 to-transparent p-6 rounded-2xl border border-red-500/20">
-        <div>
-          <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-            <ArrowDownCircle className="text-red-400" size={28} />
-            Expense Entry (খরচ এন্ট্রি)
+      <div className="flex flex-row justify-between items-center gap-3 bg-gradient-to-r from-red-500/10 via-orange-500/10 to-transparent p-3.5 md:p-5 rounded-xl md:rounded-2xl border border-red-500/20">
+        <div className="min-w-0">
+          <h2 className="text-lg md:text-2xl font-bold text-white flex items-center gap-2">
+            <ArrowDownCircle className="text-red-400 shrink-0 w-5 h-5 md:w-7 md:h-7" />
+            খরচ এন্ট্রি (Expense)
           </h2>
-          <p className="text-white/70 text-sm mt-1">
+          <p className="hidden md:block text-white/70 text-sm mt-1">
             যানবাহন ভিত্তিক দৈনিক খরচ এখানে এন্ট্রি করুন। যানবাহন নির্বাচন না করলে খরচটি সাধারণ খরচ হিসেবে গণ্য হবে।
           </p>
         </div>
-        <div className="px-5 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-center">
-          <div className="text-[11px] uppercase tracking-wider text-white/50">আজকের খরচ</div>
-          <div className="text-xl font-bold text-red-400">৳ {bn(todaysExpense)}</div>
+        <div className="px-3 py-2 md:px-5 md:py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-center shrink-0">
+          <div className="text-[10px] md:text-[11px] uppercase tracking-wider text-white/50">আজকের খরচ</div>
+          <div className="text-base md:text-xl font-bold text-red-400">৳ {bn(todaysExpense)}</div>
         </div>
       </div>
 
       {/* Entry Form */}
-      <div className="glass-panel p-8 w-full border-t-4 border-t-red-500">
-        <h3 className="flex items-center gap-2 mb-6 text-red-400 text-xl font-bold">
-          <Plus size={24} /> নতুন খরচ যুক্ত করুন
+      <div className="glass-panel panel-pad w-full border-t-4 border-t-red-500">
+        <h3 className="panel-title text-red-400">
+          <Plus size={20} /> নতুন খরচ যুক্ত করুন
         </h3>
 
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5 items-start">
 
           <div className="form-group !mb-0">
             <label className="form-label">রিক্সা নাম্বার (Vehicle)</label>
@@ -177,12 +175,12 @@ export default function ExpenseEntry() {
             />
           </div>
 
-          <div className="md:col-span-2 lg:col-span-3 flex justify-end gap-3 mt-2">
-            <button type="button" onClick={resetForm} className="btn btn-secondary px-8">রিসেট</button>
+          <div className="md:col-span-2 lg:col-span-3 grid grid-cols-2 sm:flex sm:justify-end gap-2.5 mt-1">
+            <button type="button" onClick={resetForm} className="btn btn-secondary sm:px-8">রিসেট</button>
             <button
               type="submit"
               disabled={saving}
-              className="btn bg-red-500 hover:bg-red-600 text-white shadow-[0_4px_15px_rgba(239,68,68,0.3)] px-12 text-lg disabled:opacity-60"
+              className="btn bg-red-500 hover:bg-red-600 text-white shadow-[0_4px_15px_rgba(239,68,68,0.3)] sm:px-12 disabled:opacity-60"
             >
               {saving ? 'সংরক্ষণ হচ্ছে...' : 'সংরক্ষণ করুন'}
             </button>
@@ -191,9 +189,9 @@ export default function ExpenseEntry() {
       </div>
 
       {/* Recent expenses */}
-      <div className="glass-panel p-8 w-full">
-        <h3 className="flex items-center gap-2 mb-6 text-red-400 text-xl font-bold">
-          <ArrowDownCircle size={24} /> সাম্প্রতিক খরচ সমূহ
+      <div className="glass-panel panel-pad w-full">
+        <h3 className="panel-title text-red-400">
+          <ArrowDownCircle size={20} /> সাম্প্রতিক খরচ সমূহ
         </h3>
 
         {loading ? (
@@ -201,8 +199,46 @@ export default function ExpenseEntry() {
         ) : expenses.length === 0 ? (
           <p className="text-white/60 text-center py-8">কোনো খরচ নেই।</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+          <>
+          {/* Phone view */}
+          <div className="md:hidden flex flex-col gap-2.5">
+            {expenses.map(expense => (
+              <div key={expense.id} className="rec-card">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex flex-col gap-1 min-w-0">
+                    {expense.rickshaws ? (
+                      <span className="inline-flex items-center gap-1.5 flex-wrap">
+                        <span className="id-badge">{expense.rickshaws.identity_no || 'N/A'}</span>
+                        <span className="text-white/85 text-sm font-semibold">{expense.rickshaws.registration_number}</span>
+                      </span>
+                    ) : (
+                      <span className="text-white/40 text-sm">সাধারণ খরচ</span>
+                    )}
+                    <span className="text-white/45 text-xs font-mono">{formatDate(expense.date)}</span>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className="font-bold text-red-400 text-base">৳ {bn(expense.amount)}</span>
+                    <button
+                      onClick={() => handleDelete(expense.id)}
+                      className="p-2 text-red-400 rounded-lg active:bg-white/10"
+                      aria-label="মুছে ফেলুন"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="rec-row">
+                  <span className="rec-key">বিবরণ</span>
+                  <span className="rec-val text-xs">{expense.expense_particulars || '—'}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Tablet and up */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-left border-collapse data-table">
               <thead>
                 <tr className="border-b border-white/10 text-white/60 text-xs uppercase tracking-wider bg-white/5">
                   <th className="p-4">তারিখ</th>
@@ -215,7 +251,7 @@ export default function ExpenseEntry() {
               <tbody className="divide-y divide-white/5 text-sm text-white/80">
                 {expenses.map(expense => (
                   <tr key={expense.id} className="hover:bg-white/5 transition-colors duration-150">
-                    <td className="p-4 whitespace-nowrap text-white/70">{expense.date}</td>
+                    <td className="p-4 whitespace-nowrap text-white/70 font-mono">{formatDate(expense.date)}</td>
                     <td className="p-4 whitespace-nowrap">
                       {expense.rickshaws ? (
                         <span className="inline-flex items-center gap-1.5">
@@ -244,6 +280,7 @@ export default function ExpenseEntry() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
     </div>

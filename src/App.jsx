@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink, Navigate, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Users, Wrench, Menu, X, LogOut, Shield, PiggyBank, UserCheck, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
+import { LayoutDashboard, Users, Wrench, Menu, X, LogOut, Shield, PiggyBank, UserCheck, ArrowUpCircle, ArrowDownCircle, HandCoins } from 'lucide-react';
 import './index.css';
 
 import Rickshaws from './pages/Rickshaws';
 import Drivers from './pages/Drivers';
 import DepositEntry from './pages/DepositEntry';
+import DueRecovery from './pages/DueRecovery';
 import ExpenseEntry from './pages/ExpenseEntry';
 import Dashboard from './pages/Dashboard';
 import Parts from './pages/Parts';
@@ -38,11 +39,10 @@ const NavItem = ({ to, icon: Icon, label, onNavigate }) => (
     end={to === '/'}
     onClick={onNavigate}
     className={({ isActive }) =>
-      `group relative flex items-center gap-3 ml-6 pl-5 pr-3 py-3 rounded-xl text-[15px] font-medium overflow-hidden
+      `group relative flex items-center gap-3 ml-2 pl-4 pr-3 py-2.5 rounded-xl text-[15px] font-medium overflow-hidden
        border border-transparent transition-all duration-300 ease-out
-       hover:translate-x-1.5 hover:border-[#00f2fe]/30 hover:text-white
-       hover:bg-gradient-to-r hover:from-[#00f2fe]/25 hover:via-[#4facfe]/10 hover:to-transparent
-       hover:shadow-[0_6px_20px_-6px_rgba(0,242,254,0.45)] ${
+       hover:border-[#00f2fe]/30 hover:text-white
+       hover:bg-gradient-to-r hover:from-[#00f2fe]/25 hover:via-[#4facfe]/10 hover:to-transparent ${
         isActive
           ? 'text-white border-[#00f2fe]/40 bg-gradient-to-r from-[#00f2fe]/20 to-transparent'
           : 'text-slate-300/75'
@@ -54,14 +54,13 @@ const NavItem = ({ to, icon: Icon, label, onNavigate }) => (
         {/* Left accent indicator */}
         <span
           className={`absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-full bg-gradient-to-b from-[#4facfe] to-[#00f2fe]
-            shadow-[0_0_10px_rgba(0,242,254,0.8)] transition-all duration-300 ${isActive ? 'h-7' : 'h-0 group-hover:h-7'}`}
+            shadow-[0_0_10px_rgba(0,242,254,0.8)] transition-all duration-300 ${isActive ? 'h-6' : 'h-0 group-hover:h-6'}`}
         />
         <Icon
           size={18}
-          className={`shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:text-[#00f2fe]
-            group-hover:drop-shadow-[0_0_6px_rgba(0,242,254,0.7)] ${isActive ? 'text-[#00f2fe]' : ''}`}
+          className={`shrink-0 transition-colors duration-300 group-hover:text-[#00f2fe] ${isActive ? 'text-[#00f2fe]' : ''}`}
         />
-        <span className="transition-transform duration-300 group-hover:translate-x-0.5">{label}</span>
+        <span>{label}</span>
       </>
     )}
   </NavLink>
@@ -81,30 +80,32 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         />
       )}
 
-      <aside className={`fixed lg:sticky flex flex-col top-0 left-0 h-screen w-[280px] px-5 py-8 z-50 transition-transform duration-300
+      <aside className={`fixed lg:sticky flex flex-col top-0 left-0 h-screen w-[264px] px-3 py-5 lg:py-7 z-50 transition-transform duration-300
+        overflow-y-auto overscroll-contain
         bg-gradient-to-b from-[#0b1e4b] via-[#0a1738] to-[#071026] border-r border-[#1e3a8a]/50 shadow-[4px_0_24px_-8px_rgba(0,0,0,0.7)]
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-        <div className="flex justify-between items-center mb-12 pl-3">
-          <h2 className="flex items-center gap-3 text-white text-2xl font-bold">
-            <AutoRickshawIcon size={32} className="text-[#00f2fe]" /> ARMS
+        <div className="flex justify-between items-center mb-6 pl-3">
+          <h2 className="flex items-center gap-2.5 text-white text-xl font-bold">
+            <AutoRickshawIcon size={28} className="text-[#00f2fe]" /> ARMS
           </h2>
-          <button onClick={closeSidebar} className="lg:hidden text-white/70 hover:text-white">
-            <X size={24} />
+          <button onClick={closeSidebar} className="lg:hidden text-white/70 hover:text-white p-1" aria-label="মেনু বন্ধ করুন">
+            <X size={22} />
           </button>
         </div>
 
-        <nav className="flex flex-col gap-1.5 flex-1">
+        <nav className="flex flex-col gap-1 flex-1">
           <NavItem to="/" icon={LayoutDashboard} label="Dashboard" onNavigate={closeSidebar} />
           <NavItem to="/rickshaws" icon={AutoRickshawIcon} label="New Vehicle Entry" onNavigate={closeSidebar} />
           <NavItem to="/daily-deposits" icon={PiggyBank} label="Set Daily Deposit" onNavigate={closeSidebar} />
           <NavItem to="/drivers" icon={Users} label="Drivers" onNavigate={closeSidebar} />
           <NavItem to="/assign-driver-vehicle" icon={UserCheck} label="Assign Driver" onNavigate={closeSidebar} />
           <NavItem to="/deposits" icon={ArrowUpCircle} label="Deposit Entry" onNavigate={closeSidebar} />
+          <NavItem to="/due-recovery" icon={HandCoins} label="Due Recovery" onNavigate={closeSidebar} />
           <NavItem to="/expenses" icon={ArrowDownCircle} label="Expense Entry" onNavigate={closeSidebar} />
           <NavItem to="/parts" icon={Wrench} label="Parts" onNavigate={closeSidebar} />
 
           {userRole === 'admin' && (
-            <div className="mt-4 pt-4 border-t border-white/10">
+            <div className="mt-3 pt-3 border-t border-white/10">
               <NavItem to="/users" icon={Shield} label="User Management" onNavigate={closeSidebar} />
             </div>
           )}
@@ -124,29 +125,34 @@ const Header = ({ setIsSidebarOpen }) => {
   }, []);
 
   return (
-    <div className="bg-[#141419]/80 backdrop-blur-md border-b border-white/10 text-white flex items-center justify-between p-4 md:px-8 shadow-md sticky top-0 z-30 shrink-0">
-      <div className="flex items-center lg:hidden">
-        <h2 className="flex items-center gap-2 text-white text-xl font-bold mr-4">
-          <AutoRickshawIcon size={24} className="text-[#00f2fe]" /> ARMS
-        </h2>
-        <button onClick={() => setIsSidebarOpen(true)} className="text-white/70 hover:text-white p-2">
-          <Menu size={24} />
+    <div className="bg-[#141419]/85 backdrop-blur-md border-b border-white/10 text-white flex items-center justify-between gap-2 px-3 py-2.5 md:px-6 md:py-3 shadow-md sticky top-0 z-30 shrink-0">
+      <div className="flex items-center gap-1 lg:hidden min-w-0">
+        <button
+          onClick={() => setIsSidebarOpen(true)}
+          className="text-white/80 hover:text-white p-2 -ml-1 shrink-0"
+          aria-label="মেনু খুলুন"
+        >
+          <Menu size={22} />
         </button>
+        <h2 className="flex items-center gap-1.5 text-white text-base font-bold truncate">
+          <AutoRickshawIcon size={20} className="text-[#00f2fe] shrink-0" /> ARMS
+        </h2>
       </div>
 
       <div className="hidden lg:block flex-1"></div>
 
-      <div className="flex items-center justify-end gap-4 md:gap-6 w-full lg:w-auto">
-        <div className="font-bold text-sm md:text-lg text-[#00f2fe]">
+      <div className="flex items-center justify-end gap-2.5 md:gap-5 shrink-0">
+        <div className="font-bold text-xs md:text-lg text-[#00f2fe] tabular-nums">
           {time.toLocaleTimeString()}
         </div>
-        <div className="hidden sm:flex items-center gap-2 font-medium text-gray-300">
+        <div className="hidden md:flex items-center gap-2 font-medium text-gray-300">
           <UserCheck size={20} className="text-[#00f2fe]" />
           <span>{user?.email?.split('@')[0] || 'User'}</span>
         </div>
-        <button 
-          onClick={() => logout()} 
-          className="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg hover:bg-red-500 hover:text-white transition-all duration-300 text-sm font-semibold"
+        <button
+          onClick={() => logout()}
+          className="flex items-center gap-2 px-2.5 py-1.5 md:px-4 md:py-2 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg hover:bg-red-500 hover:text-white transition-all duration-300 text-sm font-semibold shrink-0"
+          aria-label="লগআউট"
         >
           <LogOut size={16} /> <span className="hidden sm:inline">Logout</span>
         </button>
@@ -166,10 +172,10 @@ const ProtectedLayout = () => {
   return (
     <div className="flex min-h-screen">
       <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
-      <main className="flex-1 w-full flex flex-col relative">
+      <main className="flex-1 min-w-0 flex flex-col relative">
         <Header setIsSidebarOpen={setIsSidebarOpen} />
 
-        <div className="flex-1 p-4 md:p-8 lg:p-12 overflow-y-auto">
+        <div className="flex-1 min-w-0 p-3 sm:p-4 md:p-6 lg:p-8">
           <Outlet />
         </div>
       </main>
@@ -192,6 +198,7 @@ function App() {
             <Route path="/drivers" element={<Drivers />} />
             <Route path="/assign-driver-vehicle" element={<AssignDriverVehicle />} />
             <Route path="/deposits" element={<DepositEntry />} />
+            <Route path="/due-recovery" element={<DueRecovery />} />
             <Route path="/expenses" element={<ExpenseEntry />} />
             {/* Old Finances page has been split into the two entry screens above */}
             <Route path="/finances" element={<Navigate to="/deposits" replace />} />

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { UserCheck, Plus, Trash2, Edit2, CarFront, Hash, Calendar, User, CheckCircle2, XCircle, LogOut } from 'lucide-react';
+import { UserCheck, Plus, Trash2, Edit2, CarFront, Hash, User, CheckCircle2, XCircle, LogOut, Phone } from 'lucide-react';
+import { today, formatDate } from '../lib/date';
 
 export default function AssignDriverVehicle() {
   const [rickshaws, setRickshaws] = useState([]);
@@ -12,7 +13,7 @@ export default function AssignDriverVehicle() {
   const [selectedRickshawId, setSelectedRickshawId] = useState('');
   const [selectedRegNo, setSelectedRegNo] = useState('');
   const [selectedDriverId, setSelectedDriverId] = useState('');
-  const [assignDate, setAssignDate] = useState(new Date().toISOString().split('T')[0]);
+  const [assignDate, setAssignDate] = useState(today());
   const [releaseDate, setReleaseDate] = useState('');
   const [status, setStatus] = useState('active');
 
@@ -92,7 +93,7 @@ export default function AssignDriverVehicle() {
     try {
       // If status is 'active', release any existing active assignments for this vehicle or driver
       if (status === 'active') {
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayStr = today();
         
         // Deactivate previous active assignment for this vehicle
         await supabase
@@ -137,7 +138,7 @@ export default function AssignDriverVehicle() {
       setSelectedRickshawId('');
       setSelectedRegNo('');
       setSelectedDriverId('');
-      setAssignDate(new Date().toISOString().split('T')[0]);
+      setAssignDate(today());
       setReleaseDate('');
       setStatus('active');
 
@@ -151,7 +152,7 @@ export default function AssignDriverVehicle() {
   async function handleQuickRelease(item) {
     if (!window.confirm('আপনি কি এই ড্রাইভারকে গাড়ি থেকে রিলিজ করতে চান?')) return;
     
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = today();
     try {
       const { error } = await supabase
         .from('driver_vehicle_assignments')
@@ -230,28 +231,28 @@ export default function AssignDriverVehicle() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      
+    <div className="flex flex-col gap-3 md:gap-6">
+
       {/* Header Banner */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-[#00f2fe]/10 via-purple-500/10 to-transparent p-6 rounded-2xl border border-[#00f2fe]/20">
-        <div>
-          <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-            <UserCheck className="text-[#00f2fe]" size={28} /> 
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-[#00f2fe]/10 via-purple-500/10 to-transparent p-3.5 md:p-5 rounded-xl md:rounded-2xl border border-[#00f2fe]/20">
+        <div className="min-w-0">
+          <h2 className="text-lg md:text-2xl font-bold text-white flex items-center gap-2">
+            <UserCheck className="text-[#00f2fe] shrink-0 w-5 h-5 md:w-7 md:h-7" />
             Assign Driver with Vehicle (ড্রাইভার অ্যাসাইনমেন্ট)
           </h2>
-          <p className="text-white/70 text-sm mt-1">
+          <p className="hidden md:block text-white/70 text-sm mt-1">
             কোন ড্রাইভার কোন গাড়ি কত তারিখ থেকে কত তারিখ পর্যন্ত চালাচ্ছে তার অ্যাসাইনমেন্ট ও রিলিজ রেকর্ড।
           </p>
         </div>
       </div>
 
       {/* Form Section */}
-      <div className="glass-panel p-8 w-full">
-        <h3 className="flex items-center gap-2 mb-6 text-[#00f2fe] text-xl font-bold">
-          <Plus size={24} /> নতুন ড্রাইভার অ্যাসাইন করুন
+      <div className="glass-panel panel-pad w-full">
+        <h3 className="panel-title text-[#00f2fe]">
+          <Plus size={20} /> নতুন ড্রাইভার অ্যাসাইন করুন
         </h3>
 
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5 items-start">
           
           {/* 1. Identity No Dropdown */}
           <div className="form-group">
@@ -347,8 +348,8 @@ export default function AssignDriverVehicle() {
           </div>
 
           {/* Submit Button */}
-          <div className="lg:col-span-3 flex justify-end mt-2">
-            <button type="submit" className="btn btn-primary w-full md:w-auto md:px-12 text-lg">
+          <div className="lg:col-span-3 flex justify-end mt-1">
+            <button type="submit" className="btn btn-primary w-full md:w-auto md:px-12">
               সংরক্ষণ করুন
             </button>
           </div>
@@ -357,9 +358,9 @@ export default function AssignDriverVehicle() {
       </div>
 
       {/* List Table Section */}
-      <div className="glass-panel p-8 w-full">
-        <h3 className="flex items-center gap-2 mb-6 text-[#00f2fe] text-xl font-bold">
-          <UserCheck size={24} /> ড্রাইভার অ্যাসাইনমেন্ট তালিকা
+      <div className="glass-panel panel-pad w-full">
+        <h3 className="panel-title text-[#00f2fe]">
+          <UserCheck size={20} /> ড্রাইভার অ্যাসাইনমেন্ট তালিকা
         </h3>
 
         {loading ? (
@@ -367,8 +368,85 @@ export default function AssignDriverVehicle() {
         ) : assignments.length === 0 ? (
           <p className="text-white/60 text-center py-8">এখনো কোনো অ্যাসাইনমেন্ট রেকর্ড নেই।</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+          <>
+          {/* Phone view: one card per assignment instead of an 8-column table */}
+          <div className="md:hidden flex flex-col gap-2.5">
+            {assignments.map(item => (
+              <div key={item.id} className="rec-card">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex flex-col gap-1 min-w-0">
+                    <span className="inline-flex items-center gap-1.5 flex-wrap">
+                      <span className="id-badge"><Hash size={11} />{item.rickshaws?.identity_no || 'N/A'}</span>
+                      <span className="text-white/85 text-sm font-semibold">{item.rickshaws?.registration_number || 'N/A'}</span>
+                    </span>
+                    <span className="flex items-center gap-1.5 text-sm font-bold text-white">
+                      <User size={13} className="text-[#00f2fe] shrink-0" /> {item.drivers?.name || 'N/A'}
+                    </span>
+                    {item.drivers?.phone && (
+                      <span className="flex items-center gap-1.5 text-xs font-mono text-white/60">
+                        <Phone size={12} className="text-[#00f2fe] shrink-0" /> {item.drivers.phone}
+                      </span>
+                    )}
+                  </div>
+
+                  {item.status === 'active' ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shrink-0">
+                      <CheckCircle2 size={12} /> চলাচ্ছে
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-gray-500/20 text-gray-400 border border-gray-500/30 shrink-0">
+                      <XCircle size={12} /> রিলিজড
+                    </span>
+                  )}
+                </div>
+
+                <div className="rec-row">
+                  <span className="rec-key">অ্যাসাইন</span>
+                  <span className="rec-val text-xs font-mono">{formatDate(item.assign_date)}</span>
+                </div>
+                <div className="rec-row">
+                  <span className="rec-key">রিলিজ</span>
+                  <span className="rec-val text-xs font-mono">
+                    {item.release_date ? formatDate(item.release_date) : 'চলমান'}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-end gap-1 border-t border-white/5 pt-2">
+                  {item.status === 'active' && (
+                    <button
+                      onClick={() => handleQuickRelease(item)}
+                      className="btn btn-secondary !py-1.5 !px-3 text-xs text-orange-400 border-orange-500/30 flex items-center gap-1"
+                    >
+                      <LogOut size={13} /> রিলিজ
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      setEditingItem(item);
+                      setEditAssignDate(item.assign_date);
+                      setEditReleaseDate(item.release_date || '');
+                      setEditStatus(item.status);
+                    }}
+                    className="p-2 text-white/70 rounded-lg active:bg-white/10"
+                    aria-label="এডিট"
+                  >
+                    <Edit2 size={15} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(item.id)}
+                    className="p-2 text-red-400 rounded-lg active:bg-white/10"
+                    aria-label="মুছে ফেলুন"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Tablet and up */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-left border-collapse data-table">
               <thead>
                 <tr className="border-b border-white/10 text-white/60 text-xs uppercase tracking-wider bg-white/5">
                   <th className="p-4">পরিচিতি নম্বর</th>
@@ -414,12 +492,12 @@ export default function AssignDriverVehicle() {
 
                     {/* Assign Date */}
                     <td className="p-4 text-white/80 font-mono">
-                      {item.assign_date}
+                      {formatDate(item.assign_date)}
                     </td>
 
                     {/* Release Date */}
                     <td className="p-4 text-white/70 font-mono">
-                      {item.release_date || 'চলমান'}
+                      {item.release_date ? formatDate(item.release_date) : 'চলমান'}
                     </td>
 
                     {/* Status Badge */}
@@ -473,18 +551,19 @@ export default function AssignDriverVehicle() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
 
       {/* Edit Modal */}
       {editingItem && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-center p-4">
-          <div className="glass-panel p-8 w-full max-w-md">
-            <h3 className="mb-6 text-[#00f2fe] text-xl font-bold border-b border-white/10 pb-3 flex items-center gap-2">
-              <Edit2 size={20} /> অ্যাসাইনমেন্ট আপডেট করুন
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end md:items-center justify-center md:p-4">
+          <div className="w-full md:max-w-md bg-[#111119] border border-white/10 rounded-t-2xl md:rounded-2xl p-5 md:p-7 max-h-[92vh] overflow-y-auto">
+            <h3 className="mb-4 text-[#00f2fe] text-lg font-bold border-b border-white/10 pb-3 flex items-center gap-2">
+              <Edit2 size={19} /> অ্যাসাইনমেন্ট আপডেট করুন
             </h3>
             
-            <form onSubmit={handleSaveEdit} className="flex flex-col gap-4">
+            <form onSubmit={handleSaveEdit} className="flex flex-col gap-3">
               <div>
                 <span className="text-xs text-white/50">যানবাহন ও ড্রাইভার</span>
                 <p className="text-white font-bold text-base mt-0.5">
@@ -528,10 +607,10 @@ export default function AssignDriverVehicle() {
                 </select>
               </div>
 
-              <div className="flex gap-4 mt-4">
-                <button 
-                  type="button" 
-                  onClick={() => setEditingItem(null)} 
+              <div className="flex gap-3 mt-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingItem(null)}
                   className="btn btn-secondary flex-1"
                 >
                   বাতিল

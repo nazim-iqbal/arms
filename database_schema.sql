@@ -36,10 +36,12 @@ CREATE TABLE public.drivers (
 
 -- Daily Incomes table (Deposit Entry)
 -- amount = ক্যাশ জমা (cash received), due_amount = বাকী,
--- daily_joma_amount = snapshot of the vehicle's daily deposit rate at entry time
+-- daily_joma_amount = snapshot of the vehicle's daily deposit rate at entry time,
+-- driver_id = the driver who owes any due_amount on this row
 CREATE TABLE public.daily_incomes (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     rickshaw_id UUID REFERENCES public.rickshaws(id) ON DELETE CASCADE,
+    driver_id UUID REFERENCES public.drivers(id) ON DELETE SET NULL,
     date DATE NOT NULL DEFAULT CURRENT_DATE,
     amount NUMERIC(10, 2) NOT NULL,
     daily_joma_amount NUMERIC(10, 2),
@@ -50,6 +52,24 @@ CREATE TABLE public.daily_incomes (
 );
 
 CREATE INDEX idx_daily_incomes_rickshaw_date ON public.daily_incomes (rickshaw_id, date DESC);
+CREATE INDEX idx_daily_incomes_driver ON public.daily_incomes (driver_id);
+
+-- Due Recovery table (বাকী আদায়)
+-- amount = জমার পরিমাণ recovered, due_total = outstanding বাকী at entry time.
+-- A driver's outstanding due =
+--   SUM(daily_incomes.due_amount) - SUM(due_recoveries.amount) for that driver.
+CREATE TABLE public.due_recoveries (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    driver_id UUID REFERENCES public.drivers(id) ON DELETE CASCADE NOT NULL,
+    rickshaw_id UUID REFERENCES public.rickshaws(id) ON DELETE SET NULL,
+    due_total NUMERIC(10, 2) NOT NULL DEFAULT 0,
+    amount NUMERIC(10, 2) NOT NULL CHECK (amount > 0),
+    recovery_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    remarks TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE INDEX idx_due_recoveries_driver_date ON public.due_recoveries (driver_id, recovery_date DESC);
 
 -- Daily Expenses table
 CREATE TABLE public.daily_expenses (
@@ -104,6 +124,7 @@ ALTER TABLE public.daily_expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.parts_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.daily_deposit_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.driver_vehicle_assignments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.due_recoveries ENABLE ROW LEVEL SECURITY;
 
 -- Create policies (For development, allow all authenticated users)
 CREATE POLICY "Allow authenticated users full access" ON public.users FOR ALL TO authenticated USING (true);
@@ -114,3 +135,4 @@ CREATE POLICY "Allow authenticated users full access" ON public.daily_expenses F
 CREATE POLICY "Allow authenticated users full access" ON public.parts_transactions FOR ALL TO authenticated USING (true);
 CREATE POLICY "Allow authenticated users full access" ON public.daily_deposit_settings FOR ALL TO authenticated USING (true);
 CREATE POLICY "Allow authenticated users full access" ON public.driver_vehicle_assignments FOR ALL TO authenticated USING (true);
+CREATE POLICY "Allow authenticated users full access" ON public.due_recoveries FOR ALL TO authenticated USING (true);

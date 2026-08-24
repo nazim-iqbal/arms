@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { CarFront, Plus, Trash2, Hash, Tag } from 'lucide-react';
+import { CarFront, Plus, Trash2, Hash } from 'lucide-react';
+import { bn } from '../lib/date';
 
 export default function Rickshaws() {
   const [rickshaws, setRickshaws] = useState([]);
@@ -155,34 +156,34 @@ export default function Rickshaws() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      
+    <div className="flex flex-col gap-3 md:gap-6">
+
       {/* Header Banner */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-[#00f2fe]/10 to-transparent p-6 rounded-2xl border border-[#00f2fe]/20">
-        <div>
-          <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-            <CarFront className="text-[#00f2fe]" size={28} /> 
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-[#00f2fe]/10 to-transparent p-3.5 md:p-5 rounded-xl md:rounded-2xl border border-[#00f2fe]/20">
+        <div className="min-w-0">
+          <h2 className="text-lg md:text-2xl font-bold text-white flex items-center gap-2">
+            <CarFront className="text-[#00f2fe] shrink-0 w-5 h-5 md:w-7 md:h-7" />
             নতুন গাড়ি ভুক্তি (New Vehicle Entry)
           </h2>
-          <p className="text-white/70 text-sm mt-1">
+          <p className="hidden md:block text-white/70 text-sm mt-1">
             রিকশা ও অটোরিকশার ৩-ডিজিটের ইউনিক পরিচিতি নম্বর সহ নতুন গাড়ি এন্ট্রি ও তালিকা ব্যবস্থাপনা।
           </p>
         </div>
       </div>
 
       {/* Add New Vehicle Form */}
-      <div className="glass-panel p-8 w-full">
-        <h3 className="flex items-center gap-2 mb-6 text-[#00f2fe] text-xl font-bold">
-          <Plus size={24} /> নতুন গাড়ি যুক্ত করুন
+      <div className="glass-panel panel-pad w-full">
+        <h3 className="panel-title text-[#00f2fe]">
+          <Plus size={20} /> নতুন গাড়ি যুক্ত করুন
         </h3>
         
         {errorMsg && (
-          <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-xl text-red-300 text-sm font-medium">
+          <div className="mb-4 p-3.5 bg-red-500/20 border border-red-500/50 rounded-xl text-red-300 text-sm font-medium">
             ⚠️ {errorMsg}
           </div>
         )}
 
-        <form onSubmit={handlePreview} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+        <form onSubmit={handlePreview} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5 items-start">
           
           <div className="form-group">
             <label className="form-label">গাড়ির ধরন (Vehicle Type)</label>
@@ -266,8 +267,8 @@ export default function Rickshaws() {
             </select>
           </div>
           
-          <div className="lg:col-span-3 flex justify-end mt-2">
-            <button type="submit" className="btn btn-primary w-full md:w-auto md:px-12 text-lg">
+          <div className="lg:col-span-3 flex justify-end mt-1">
+            <button type="submit" className="btn btn-primary w-full md:w-auto md:px-12">
               যুক্ত করুন
             </button>
           </div>
@@ -275,9 +276,9 @@ export default function Rickshaws() {
       </div>
 
       {/* Vehicle List */}
-      <div className="glass-panel p-8 w-full">
-        <h3 className="flex items-center gap-2 mb-6 text-[#00f2fe] text-xl font-bold">
-          <CarFront size={24} /> সকল রেজিস্ট্রার্ড গাড়ির তালিকা
+      <div className="glass-panel panel-pad w-full">
+        <h3 className="panel-title text-[#00f2fe]">
+          <CarFront size={20} /> সকল রেজিস্ট্রার্ড গাড়ির তালিকা
         </h3>
         
         {loading ? (
@@ -285,42 +286,44 @@ export default function Rickshaws() {
         ) : rickshaws.length === 0 ? (
           <p className="text-white/60">কোনো গাড়ি পাওয়া যায়নি।</p>
         ) : (
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2.5 md:gap-4">
             {rickshaws.map(rickshaw => (
-              <div 
-                key={rickshaw.id} 
-                className="flex justify-between items-center p-5 border border-white/10 rounded-xl bg-white/5 hover:bg-white/10 transition-colors duration-200"
+              <div
+                key={rickshaw.id}
+                className="flex justify-between items-start gap-2 p-3 md:p-5 border border-white/10 rounded-xl bg-white/5 md:hover:bg-white/10 transition-colors duration-200"
               >
-                <div className="flex items-start gap-4">
+                <div className="flex items-start gap-3 md:gap-4 min-w-0">
                   {/* Identity No Badge */}
-                  <div className="flex flex-col items-center justify-center bg-[#00f2fe]/10 border border-[#00f2fe]/30 rounded-xl px-4 py-2 text-center min-w-[70px]">
-                    <span className="text-[10px] uppercase font-bold text-white/50 tracking-wider">ID NO</span>
-                    <span className="text-xl font-black text-[#00f2fe] font-mono">
+                  <div className="flex flex-col items-center justify-center bg-[#00f2fe]/10 border border-[#00f2fe]/30 rounded-xl px-2.5 py-1.5 md:px-4 md:py-2 text-center min-w-[54px] md:min-w-[70px] shrink-0">
+                    <span className="text-[9px] md:text-[10px] uppercase font-bold text-white/50 tracking-wider">ID NO</span>
+                    <span className="text-base md:text-xl font-black text-[#00f2fe] font-mono">
                       {rickshaw.identity_no || 'N/A'}
                     </span>
                   </div>
 
-                  <div>
-                    <h4 className="m-0 text-lg font-bold text-white flex items-center gap-2">
-                      {rickshaw.registration_number} 
-                      <span className="text-xs px-2 py-0.5 rounded bg-white/10 text-white/70 font-normal">
+                  <div className="min-w-0">
+                    <h4 className="m-0 text-sm md:text-lg font-bold text-white flex items-center gap-2 flex-wrap">
+                      <span className="break-all">{rickshaw.registration_number}</span>
+                      <span className="text-[10px] md:text-xs px-2 py-0.5 rounded bg-white/10 text-white/70 font-normal shrink-0">
                         {rickshaw.vehicle_type || 'N/A'}
                       </span>
                     </h4>
-                    <div className="text-sm text-white/70 mt-1">
-                      ক্রয় মূল্য: ৳{rickshaw.purchase_price ? Number(rickshaw.purchase_price).toLocaleString('bn-BD') : '0'} | অবস্থা: {rickshaw.condition === 'New' ? 'নতুন' : 'পুরাতন'}
+                    <div className="text-xs md:text-sm text-white/70 mt-1">
+                      ক্রয় মূল্য: ৳{bn(rickshaw.purchase_price)} |অবস্থা: {rickshaw.condition === 'New' ? 'নতুন' : 'পুরাতন'}
                     </div>
-                    <span className={`text-xs px-3 py-1 rounded-full inline-block mt-2 font-semibold ${
-                      rickshaw.status === 'active' ? 'bg-[#00f2fe]/20 text-[#00f2fe]' : 'bg-red-500/20 text-red-400'
+                    <span className={`text-[10px] md:text-xs px-2.5 py-1 rounded-full inline-block mt-1.5 font-semibold ${
+                      rickshaw.status === 'active' ? 'bg-[#00f2fe]/20 text-[#00f2fe]'
+                        : rickshaw.status === 'maintenance' ? 'bg-amber-500/20 text-amber-400'
+                        : 'bg-red-500/20 text-red-400'
                     }`}>
-                      {rickshaw.status.toUpperCase()}
+                      {rickshaw.status === 'active' ? 'সচল' : rickshaw.status === 'maintenance' ? 'মেরামত' : 'বন্ধ'}
                     </span>
                   </div>
                 </div>
                 
                 <button 
                   onClick={() => deleteRickshaw(rickshaw.id)}
-                  className="bg-transparent border-none text-red-400 hover:text-red-300 cursor-pointer p-2 transition-colors"
+                  className="bg-transparent border-none text-red-400 md:hover:text-red-300 cursor-pointer p-2 transition-colors shrink-0"
                   title="মুছে ফেলুন"
                 >
                   <Trash2 size={20} />
@@ -333,12 +336,12 @@ export default function Rickshaws() {
 
       {/* Preview Modal */}
       {showPreview && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-center p-4">
-          <div className="glass-panel p-8 w-full max-w-md">
-            <h3 className="mb-6 text-[#00f2fe] text-xl font-bold border-b border-white/10 pb-3">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end md:items-center justify-center md:p-4">
+          <div className="w-full md:max-w-md bg-[#111119] border border-white/10 rounded-t-2xl md:rounded-2xl p-5 md:p-7 max-h-[92vh] overflow-y-auto">
+            <h3 className="mb-4 text-[#00f2fe] text-lg font-bold border-b border-white/10 pb-3">
               গাড়ির তথ্য প্রিভিউ (Preview)
             </h3>
-            <div className="flex flex-col gap-4 mb-8 text-white/80">
+            <div className="flex flex-col gap-2.5 mb-5 text-sm text-white/80">
               <p className="flex justify-between border-b border-white/5 pb-2">
                 <span className="text-white/60">পরিচিতি নম্বর (ID):</span> 
                 <span className="font-mono font-bold text-[#00f2fe] text-lg">{identityNo}</span>
@@ -353,7 +356,7 @@ export default function Rickshaws() {
               </p>
               <p className="flex justify-between border-b border-white/5 pb-2">
                 <span className="text-white/60">ক্রয় মূল্য:</span> 
-                <span className="font-semibold text-white">৳{purchasePrice ? Number(purchasePrice).toLocaleString('bn-BD') : '0'}</span>
+                <span className="font-semibold text-white">৳{bn(purchasePrice)}</span>
               </p>
               <p className="flex justify-between border-b border-white/5 pb-2">
                 <span className="text-white/60">অবস্থা:</span> 
@@ -366,7 +369,7 @@ export default function Rickshaws() {
                 </span>
               </p>
             </div>
-            <div className="flex gap-4">
+            <div className="flex gap-3">
               <button onClick={() => setShowPreview(false)} className="btn btn-secondary flex-1">বাতিল</button>
               <button onClick={addRickshaw} className="btn btn-primary flex-1">সাবমিট করুন</button>
             </div>

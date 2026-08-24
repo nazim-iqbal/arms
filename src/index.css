@@ -3,9 +3,16 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    /* Stop iOS Safari from re-scaling text in landscape */
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
     @apply bg-[#09090e] text-white antialiased min-h-screen relative overflow-x-hidden;
-    font-family: 'Outfit', sans-serif;
+    /* Outfit has no Bengali glyphs — name the Bengali face explicitly instead of
+       letting each device pick its own fallback */
+    font-family: 'Outfit', 'Noto Sans Bengali', sans-serif;
   }
 
   /* Dynamic Animated Background */
@@ -13,12 +20,17 @@
     content: '';
     position: fixed;
     top: -50%; left: -50%; width: 200%; height: 200%;
-    background: 
+    background:
       radial-gradient(circle at 50% 50%, rgba(79, 172, 254, 0.15), transparent 40%),
       radial-gradient(circle at 80% 20%, rgba(255, 8, 68, 0.15), transparent 30%),
       radial-gradient(circle at 20% 80%, rgba(248, 54, 0, 0.1), transparent 40%);
     animation: rotateBg 30s linear infinite;
     z-index: -1;
+  }
+
+  /* A full-screen rotating gradient is expensive on phones — keep it static there */
+  @media (max-width: 767px) {
+    body::before { animation: none; }
   }
 
   @keyframes rotateBg {
@@ -35,19 +47,37 @@
   input[type=number] {
     -moz-appearance: textfield;
   }
+
+  /* Date inputs render tiny and off-centre on iOS without this */
+  input[type=date] {
+    min-height: 2.75rem;
+  }
 }
 
 @layer components {
   .glass-panel {
-    @apply bg-[#141419]/60 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] transition-all duration-300 relative overflow-hidden;
+    @apply bg-[#141419]/60 backdrop-blur-2xl border border-white/10 rounded-xl md:rounded-2xl shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] transition-all duration-300 relative overflow-hidden;
   }
-  
-  .glass-panel:hover {
-    @apply -translate-y-1 border-white/20 shadow-[0_15px_40px_0_rgba(0,0,0,0.5),0_0_15px_rgba(255,255,255,0.05)];
+
+  /* Lift only on real pointers — on touch it fires on tap and looks like a glitch */
+  @media (hover: hover) {
+    .glass-panel:hover {
+      @apply -translate-y-1 border-white/20 shadow-[0_15px_40px_0_rgba(0,0,0,0.5),0_0_15px_rgba(255,255,255,0.05)];
+    }
+  }
+
+  /* Standard padding for every panel: tight on phones, roomy on desktop */
+  .panel-pad {
+    @apply p-4 sm:p-5 md:p-7;
+  }
+
+  /* Panel heading */
+  .panel-title {
+    @apply flex items-center gap-2 mb-3 md:mb-5 text-base md:text-xl font-bold;
   }
 
   .btn {
-    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 border-none text-base relative overflow-hidden z-10;
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 md:px-6 md:py-3 rounded-xl font-semibold transition-all duration-300 border-none text-[15px] md:text-base relative overflow-hidden z-10;
   }
 
   .btn::before {
@@ -82,15 +112,16 @@
   }
 
   .form-group {
-    @apply mb-6;
+    @apply mb-3 md:mb-4;
   }
 
   .form-label {
-    @apply block text-sm font-medium mb-2 text-slate-200 tracking-wide;
+    @apply block text-[13px] md:text-sm font-medium mb-1 md:mb-1.5 text-slate-200 tracking-wide;
   }
 
+  /* text-base (16px) is deliberate: anything smaller makes iOS Safari zoom on focus */
   .form-input {
-    @apply w-full px-4 py-3.5 border border-white/10 rounded-xl text-base transition-all duration-300 bg-black/20 text-white font-sans;
+    @apply w-full px-3.5 py-2.5 md:py-3 border border-white/10 rounded-xl text-base transition-all duration-300 bg-black/20 text-white font-sans;
   }
 
   .form-input::placeholder {
@@ -111,6 +142,37 @@
   
   select.form-input option {
     @apply bg-[#1a1a24] text-white;
+  }
+
+  /* ---- Mobile record cards (used instead of wide tables below md) ---- */
+  .rec-card {
+    @apply flex flex-col gap-2 p-3.5 rounded-xl border border-white/10 bg-white/5;
+  }
+
+  .rec-row {
+    @apply flex justify-between items-center gap-3 text-sm;
+  }
+
+  .rec-key {
+    @apply text-white/45 text-[11px] uppercase tracking-wider shrink-0;
+  }
+
+  .rec-val {
+    @apply text-white/90 text-right break-words min-w-0;
+  }
+
+  /* Vehicle identity badge, reused across every screen */
+  .id-badge {
+    @apply inline-flex items-center gap-1 font-mono font-bold text-[#00f2fe] bg-[#00f2fe]/10 border border-[#00f2fe]/30 px-2 py-0.5 rounded-md text-xs;
+  }
+
+  /* Compact table styling for the desktop tables */
+  .data-table th {
+    @apply p-3 lg:p-4;
+  }
+
+  .data-table td {
+    @apply p-3 lg:p-4;
   }
 }
 

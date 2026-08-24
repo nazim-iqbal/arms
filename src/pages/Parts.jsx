@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Wrench, ShoppingCart, Tag, Trash2, CarFront } from 'lucide-react';
+import { today, formatDate, bn } from '../lib/date';
 
 export default function Parts() {
   const [transactions, setTransactions] = useState([]);
@@ -12,7 +13,7 @@ export default function Parts() {
   const [type, setType] = useState('purchase');
   const [partName, setPartName] = useState('');
   const [amount, setAmount] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(today());
 
   useEffect(() => {
     fetchData();
@@ -78,17 +79,17 @@ export default function Parts() {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-      
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-6">
+
       {/* Add Transaction Form */}
-      <div className={`glass-panel p-8 border-t-4 ${type === 'purchase' ? 'border-t-orange-500' : 'border-t-[#00f2fe]'}`}>
-        <h3 className={`flex items-center gap-2 mb-6 text-xl font-bold ${type === 'purchase' ? 'text-orange-400' : 'text-[#00f2fe]'}`}>
-          {type === 'purchase' ? <ShoppingCart size={24} /> : <Tag size={24} />} 
+      <div className={`glass-panel panel-pad border-t-4 ${type === 'purchase' ? 'border-t-orange-500' : 'border-t-[#00f2fe]'}`}>
+        <h3 className={`panel-title ${type === 'purchase' ? 'text-orange-400' : 'text-[#00f2fe]'}`}>
+          {type === 'purchase' ? <ShoppingCart size={20} /> : <Tag size={20} />}
           যন্ত্রাংশ {type === 'purchase' ? 'ক্রয় (Purchase)' : 'বিক্রয় (Sale)'} এন্ট্রি
         </h3>
         
-        <form onSubmit={addTransaction} className="flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-4 mb-2">
+        <form onSubmit={addTransaction} className="flex flex-col gap-3">
+          <div className="grid grid-cols-2 gap-2.5 mb-1">
             <button 
               type="button" 
               onClick={() => setType('purchase')}
@@ -122,7 +123,7 @@ export default function Parts() {
             <input type="text" className="form-input" value={partName} onChange={(e) => setPartName(e.target.value)} placeholder="e.g. ব্যাটারি, চাকা" required />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="form-label">টাকার পরিমাণ</label>
               <input type="text" inputMode="numeric" pattern="[0-9]*" className="form-input" value={amount} onChange={(e) => setAmount(e.target.value.replace(/\D/g, ''))} placeholder="0" required />
@@ -133,16 +134,16 @@ export default function Parts() {
             </div>
           </div>
           
-          <button type="submit" className={`btn text-white w-full mt-4 ${type === 'purchase' ? 'bg-orange-500 hover:bg-orange-600 shadow-[0_4px_15px_rgba(249,115,22,0.3)]' : 'bg-[#00f2fe] hover:bg-[#0891b2] text-black shadow-[0_4px_15px_rgba(0,242,254,0.3)]'}`}>
+          <button type="submit" className={`btn text-white w-full mt-2 ${type === 'purchase' ? 'bg-orange-500 hover:bg-orange-600 shadow-[0_4px_15px_rgba(249,115,22,0.3)]' : 'bg-[#00f2fe] hover:bg-[#0891b2] text-black shadow-[0_4px_15px_rgba(0,242,254,0.3)]'}`}>
             সংরক্ষণ করুন
           </button>
         </form>
       </div>
 
       {/* Transactions List */}
-      <div className="glass-panel p-8">
-        <h3 className="flex items-center gap-2 mb-6 text-[#00f2fe] text-xl font-bold">
-          <Wrench size={24} /> যন্ত্রাংশের তালিকা
+      <div className="glass-panel panel-pad">
+        <h3 className="panel-title text-[#00f2fe]">
+          <Wrench size={20} /> যন্ত্রাংশের তালিকা
         </h3>
         
         {loading ? (
@@ -150,29 +151,35 @@ export default function Parts() {
         ) : transactions.length === 0 ? (
           <p className="text-white/60 text-center py-8">কোনো রেকর্ড পাওয়া যায়নি।</p>
         ) : (
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2.5 md:gap-4">
             {transactions.map(t => (
               <div 
                 key={t.id} 
-                className={`flex justify-between items-start p-5 border border-white/10 border-l-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors duration-200 ${t.transaction_type === 'purchase' ? 'border-l-orange-500' : 'border-l-[#00f2fe]'}`}
+                className={`flex justify-between items-start gap-2 p-3 md:p-5 border border-white/10 border-l-4 rounded-xl bg-white/5 md:hover:bg-white/10 transition-colors duration-200 ${t.transaction_type === 'purchase' ? 'border-l-orange-500' : 'border-l-[#00f2fe]'}`}
               >
-                <div className="flex flex-col gap-1 text-white/70">
-                  <h4 className="m-0 text-lg font-bold text-white mb-1">{t.partName || t.part_name}</h4>
+                <div className="flex flex-col gap-0.5 text-white/70 min-w-0">
+                  <h4 className="m-0 text-base md:text-lg font-bold text-white break-words">{t.part_name}</h4>
                   
-                  <div className={`font-semibold text-[15px] ${t.transaction_type === 'purchase' ? 'text-orange-400' : 'text-[#00f2fe]'}`}>
-                    {t.transaction_type === 'purchase' ? 'ক্রয়' : 'বিক্রয়'}: ৳{t.amount}
+                  <div className={`font-semibold text-sm md:text-[15px] ${t.transaction_type === 'purchase' ? 'text-orange-400' : 'text-[#00f2fe]'}`}>
+                    {t.transaction_type === 'purchase' ? 'ক্রয়' : 'বিক্রয়'}: ৳ {bn(t.amount)}
                   </div>
                   
                   {t.rickshaws?.registration_number && (
-                    <div className="flex items-center gap-2 text-sm mt-1">
-                      <CarFront size={14} /> {t.rickshaws.identity_no ? `[ID: ${t.rickshaws.identity_no}] ` : ''}{t.rickshaws.registration_number}
+                    <div className="flex items-center gap-1.5 text-xs md:text-sm mt-0.5 flex-wrap">
+                      <CarFront size={13} className="shrink-0" />
+                      {t.rickshaws.identity_no && <span className="id-badge">{t.rickshaws.identity_no}</span>}
+                      <span>{t.rickshaws.registration_number}</span>
                     </div>
                   )}
-                  <div className="text-sm">তারিখ: {t.transaction_date}</div>
+                  <div className="text-sm">তারিখ: {formatDate(t.transaction_date)}</div>
                 </div>
 
-                <button onClick={() => deleteTransaction(t.id)} className="bg-transparent border-none text-red-400 hover:text-red-300 cursor-pointer p-2 transition-colors">
-                  <Trash2 size={20} />
+                <button
+                  onClick={() => deleteTransaction(t.id)}
+                  className="bg-transparent border-none text-red-400 md:hover:text-red-300 cursor-pointer p-2 transition-colors shrink-0"
+                  aria-label="মুছে ফেলুন"
+                >
+                  <Trash2 size={18} />
                 </button>
               </div>
             ))}

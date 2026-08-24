@@ -124,31 +124,31 @@ export default function Drivers() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      
+    <div className="flex flex-col gap-3 md:gap-6">
+
       {/* Header Banner */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-[#00f2fe]/10 via-purple-500/10 to-transparent p-6 rounded-2xl border border-[#00f2fe]/20">
-        <div>
-          <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-            <Users className="text-[#00f2fe]" size={28} /> 
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-[#00f2fe]/10 via-purple-500/10 to-transparent p-3.5 md:p-5 rounded-xl md:rounded-2xl border border-[#00f2fe]/20">
+        <div className="min-w-0">
+          <h2 className="text-lg md:text-2xl font-bold text-white flex items-center gap-2">
+            <Users className="text-[#00f2fe] shrink-0 w-5 h-5 md:w-7 md:h-7" />
             ড্রাইভার রেজিস্ট্রি (Driver Registry)
           </h2>
-          <p className="text-white/70 text-sm mt-1">
+          <p className="hidden md:block text-white/70 text-sm mt-1">
             ড্রাইভারদের বিস্তারিত ব্যাক্তিগত তথ্য, স্থায়ী ও বর্তমান ঠিকানা, বিশেষ মন্তব্য ও রেফারেন্সসহ প্রোফাইল।
           </p>
         </div>
       </div>
 
       {/* Driver Entry Form (Full Width - Top) */}
-      <div className="glass-panel p-8 w-full">
-        <h3 className="flex items-center gap-2 mb-6 text-[#00f2fe] text-xl font-bold border-b border-white/10 pb-3">
-          <UserPlus size={24} /> নতুন ড্রাইভার যুক্ত করুন
+      <div className="glass-panel panel-pad w-full">
+        <h3 className="panel-title text-[#00f2fe] border-b border-white/10 pb-2.5">
+          <UserPlus size={20} /> নতুন ড্রাইভার যুক্ত করুন
         </h3>
         
-        <form onSubmit={addDriver} className="flex flex-col gap-6">
-          
+        <form onSubmit={addDriver} className="flex flex-col gap-3 md:gap-5">
+
           {/* Row 1: Basic Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5">
             <div>
               <label className="form-label">ড্রাইভারের নাম *</label>
               <input 
@@ -228,7 +228,7 @@ export default function Drivers() {
           </div>
 
           {/* Row 2: Addresses */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-white/10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-5 pt-2 border-t border-white/10">
             <div>
               <label className="form-label font-semibold text-[#00f2fe]">১. স্থায়ী ঠিকানা (Permanent Address)</label>
               <textarea 
@@ -269,7 +269,7 @@ export default function Drivers() {
           </div>
 
           {/* Row 3: Remarks & Referred By */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-white/10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-5 pt-2 border-t border-white/10">
             <div>
               <label className="form-label">বিশেষ মন্তব্য (Special Remarks)</label>
               <textarea 
@@ -293,8 +293,8 @@ export default function Drivers() {
             </div>
           </div>
           
-          <div className="flex justify-end mt-2">
-            <button type="submit" className="btn btn-primary w-full md:w-auto md:px-12 text-lg py-3">
+          <div className="flex justify-end mt-1">
+            <button type="submit" className="btn btn-primary w-full md:w-auto md:px-12">
               সংরক্ষণ করুন
             </button>
           </div>
@@ -303,9 +303,9 @@ export default function Drivers() {
       </div>
 
       {/* Driver List Section (Full Width - Bottom) */}
-      <div className="glass-panel p-8 w-full">
-        <h3 className="flex items-center gap-2 mb-6 text-[#00f2fe] text-xl font-bold border-b border-white/10 pb-3">
-          <Users size={24} /> ড্রাইভারদের তালিকা ({drivers.length})
+      <div className="glass-panel panel-pad w-full">
+        <h3 className="panel-title text-[#00f2fe] border-b border-white/10 pb-2.5">
+          <Users size={20} /> ড্রাইভারদের তালিকা ({drivers.length})
         </h3>
         
         {loading ? (
@@ -313,32 +313,32 @@ export default function Drivers() {
         ) : drivers.length === 0 ? (
           <p className="text-white/60 text-center py-8">কোনো ড্রাইভার পাওয়া যায়নি।</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 md:gap-5">
             {drivers.map(driver => (
-              <div 
-                key={driver.id} 
-                className="flex flex-col justify-between p-5 border border-white/10 rounded-xl bg-white/5 hover:bg-white/10 transition-all duration-200 gap-4"
+              <div
+                key={driver.id}
+                className="flex flex-col justify-between p-3 md:p-5 border border-white/10 rounded-xl bg-white/5 md:hover:bg-white/10 transition-all duration-200 gap-3"
               >
-                <div className="flex items-start gap-4">
+                <div className="flex items-start gap-3 md:gap-4">
                   {/* Avatar / Photo */}
                   {driver.photo_url ? (
-                    <img 
-                      src={driver.photo_url} 
-                      alt={driver.name} 
-                      className="w-16 h-16 rounded-xl object-cover border border-[#00f2fe]/40 shadow-md shrink-0" 
+                    <img
+                      src={driver.photo_url}
+                      alt={driver.name}
+                      className="w-12 h-12 md:w-16 md:h-16 rounded-xl object-cover border border-[#00f2fe]/40 shadow-md shrink-0"
                       onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = 'https://via.placeholder.com/150?text=Driver';
+                        // Fall back to the placeholder icon rather than a broken-image glyph
+                        e.target.style.display = 'none';
                       }}
                     />
                   ) : (
-                    <div className="w-16 h-16 rounded-xl bg-[#00f2fe]/10 border border-[#00f2fe]/30 flex items-center justify-center text-[#00f2fe] shrink-0">
-                      <User size={32} />
+                    <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl bg-[#00f2fe]/10 border border-[#00f2fe]/30 flex items-center justify-center text-[#00f2fe] shrink-0">
+                      <User className="w-6 h-6 md:w-8 md:h-8" />
                     </div>
                   )}
 
-                  <div className="flex flex-col gap-1 text-white/70 overflow-hidden">
-                    <h4 className="m-0 text-lg font-bold text-white truncate flex items-center gap-2">
+                  <div className="flex flex-col gap-0.5 text-white/70 overflow-hidden">
+                    <h4 className="m-0 text-base md:text-lg font-bold text-white truncate flex items-center gap-2">
                       {driver.name}
                     </h4>
 
@@ -362,7 +362,7 @@ export default function Drivers() {
                   </div>
                 </div>
                 
-                <div className="flex items-center justify-end gap-2 border-t border-white/5 pt-3 mt-auto">
+                <div className="flex items-center justify-end gap-2 border-t border-white/5 pt-2.5 mt-auto">
                   <button 
                     onClick={() => setSelectedDriver(driver)}
                     className="btn btn-secondary !py-1.5 !px-3 text-xs flex items-center gap-1.5"
@@ -386,38 +386,39 @@ export default function Drivers() {
 
       {/* Driver Detail Profile Modal */}
       {selectedDriver && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-center items-center p-4">
-          <div className="glass-panel p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto relative">
-            <button 
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end md:items-center justify-center md:p-4">
+          <div className="w-full md:max-w-2xl bg-[#111119] border border-white/10 rounded-t-2xl md:rounded-2xl p-5 md:p-7 max-h-[92vh] md:max-h-[90vh] overflow-y-auto relative">
+            <button
               onClick={() => setSelectedDriver(null)}
-              className="absolute top-6 right-6 text-white/60 hover:text-white transition-colors"
+              className="absolute top-4 right-4 md:top-6 md:right-6 text-white/60 hover:text-white transition-colors p-1"
+              aria-label="বন্ধ করুন"
             >
-              <X size={24} />
+              <X size={22} />
             </button>
 
-            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 border-b border-white/10 pb-6 mb-6">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 border-b border-white/10 pb-4 mb-4">
               {selectedDriver.photo_url ? (
-                <img 
-                  src={selectedDriver.photo_url} 
-                  alt={selectedDriver.name} 
-                  className="w-24 h-24 rounded-2xl object-cover border-2 border-[#00f2fe] shadow-lg shrink-0"
+                <img
+                  src={selectedDriver.photo_url}
+                  alt={selectedDriver.name}
+                  className="w-20 h-20 md:w-24 md:h-24 rounded-2xl object-cover border-2 border-[#00f2fe] shadow-lg shrink-0"
                 />
               ) : (
-                <div className="w-24 h-24 rounded-2xl bg-[#00f2fe]/10 border-2 border-[#00f2fe] flex items-center justify-center text-[#00f2fe] shrink-0">
-                  <User size={48} />
+                <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-[#00f2fe]/10 border-2 border-[#00f2fe] flex items-center justify-center text-[#00f2fe] shrink-0">
+                  <User className="w-10 h-10 md:w-12 md:h-12" />
                 </div>
               )}
 
-              <div className="text-center sm:text-left">
-                <h3 className="text-2xl font-bold text-white">{selectedDriver.name}</h3>
+              <div className="text-center sm:text-left min-w-0">
+                <h3 className="text-xl md:text-2xl font-bold text-white break-words">{selectedDriver.name}</h3>
                 <p className="text-sm text-[#00f2fe] mt-1 font-mono">
                   {selectedDriver.phone ? `মোবাইল: ${selectedDriver.phone}` : 'মোবাইল নম্বর নেই'}
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-white/80">
-              <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-white/80">
+              <div className="space-y-2">
                 <p className="flex justify-between border-b border-white/5 pb-2">
                   <span className="text-white/50">বাবার নাম:</span>
                   <span className="font-semibold text-white">{selectedDriver.father_name || 'N/A'}</span>
@@ -427,7 +428,7 @@ export default function Drivers() {
                   <span className="font-semibold text-white">{selectedDriver.mother_name || 'N/A'}</span>
                 </p>
                 <p className="flex justify-between border-b border-white/5 pb-2">
-                  <span className="text-white/50">जन्म তারিখ:</span>
+                  <span className="text-white/50">জন্ম তারিখ:</span>
                   <span className="font-semibold text-white">{selectedDriver.dob || 'N/A'}</span>
                 </p>
                 <p className="flex justify-between border-b border-white/5 pb-2">
@@ -478,8 +479,8 @@ export default function Drivers() {
               </div>
             </div>
 
-            <div className="mt-8 flex justify-end">
-              <button onClick={() => setSelectedDriver(null)} className="btn btn-secondary px-8">
+            <div className="mt-5 flex justify-end">
+              <button onClick={() => setSelectedDriver(null)} className="btn btn-secondary w-full sm:w-auto px-8">
                 বন্ধ করুন
               </button>
             </div>

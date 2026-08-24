@@ -112,15 +112,15 @@ export default function Users() {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-6">
+
       {/* Create User Form */}
-      <div className="glass-panel p-8 lg:col-span-1 self-start">
-        <h3 className="flex items-center gap-2 mb-6 text-[#00f2fe] text-xl font-bold">
-          <UserPlus size={24} /> নতুন ইউজার তৈরি
+      <div className="glass-panel panel-pad lg:col-span-1 self-start">
+        <h3 className="panel-title text-[#00f2fe]">
+          <UserPlus size={20} /> নতুন ইউজার তৈরি
         </h3>
         
-        <form onSubmit={handleCreateUser} className="flex flex-col gap-4">
+        <form onSubmit={handleCreateUser} className="flex flex-col gap-3">
           <div>
             <label className="form-label">ইমেইল (Email)</label>
             <input 
@@ -159,7 +159,7 @@ export default function Users() {
           <button 
             type="submit" 
             disabled={creating}
-            className="btn btn-primary w-full mt-2"
+            className="btn btn-primary w-full mt-1"
           >
             {creating ? 'তৈরি হচ্ছে...' : 'ইউজার তৈরি করুন'}
           </button>
@@ -167,23 +167,23 @@ export default function Users() {
       </div>
 
       {/* Users List */}
-      <div className="glass-panel p-8 lg:col-span-2">
-        <h4 className="flex items-center gap-2 text-xl font-bold text-white mb-6">
-          <UsersIcon size={24} className="text-[#4facfe]" /> ব্যবহারকারীদের তালিকা
+      <div className="glass-panel panel-pad lg:col-span-2">
+        <h4 className="panel-title text-white">
+          <UsersIcon size={20} className="text-[#4facfe]" /> ব্যবহারকারীদের তালিকা
         </h4>
         
         {loading ? (
           <p className="text-white/60 text-center">লোড হচ্ছে...</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 md:gap-4">
             {users.map(u => (
-              <div key={u.id} className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${u.role === 'admin' ? 'bg-[#00f2fe]/20 text-[#00f2fe]' : 'bg-white/10 text-white/70'}`}>
-                    {u.role === 'admin' ? <Shield size={20} /> : <User size={20} />}
+              <div key={u.id} className="flex items-center justify-between gap-2 p-3 md:p-4 bg-white/5 border border-white/10 rounded-xl md:hover:bg-white/10 transition-colors">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center shrink-0 ${u.role === 'admin' ? 'bg-[#00f2fe]/20 text-[#00f2fe]' : 'bg-white/10 text-white/70'}`}>
+                    {u.role === 'admin' ? <Shield size={18} /> : <User size={18} />}
                   </div>
-                  <div>
-                    <div className="font-bold text-white">{u.email}</div>
+                  <div className="min-w-0">
+                    <div className="font-bold text-white text-sm md:text-base truncate">{u.email}</div>
                     <div className="text-xs text-white/50 uppercase tracking-wider mt-1">{u.role}</div>
                   </div>
                 </div>
@@ -191,9 +191,10 @@ export default function Users() {
                 {u.id !== currentUser?.id && (
                   <button 
                     onClick={() => deleteUser(u.id)}
-                    className="text-red-400 hover:text-red-300 p-2 bg-red-400/10 rounded-lg transition-colors"
+                    className="text-red-400 md:hover:text-red-300 p-2 bg-red-400/10 rounded-lg transition-colors shrink-0"
+                    aria-label="মুছে ফেলুন"
                   >
-                    <Trash2 size={18} />
+                    <Trash2 size={17} />
                   </button>
                 )}
               </div>
