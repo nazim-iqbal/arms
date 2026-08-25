@@ -1,9 +1,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 import { UserCheck, Plus, Trash2, Edit2, CarFront, Hash, User, CheckCircle2, XCircle, LogOut, Phone } from 'lucide-react';
 import { today, formatDate } from '../lib/date';
 
 export default function AssignDriverVehicle() {
+  // Only an admin may delete; everyone else can add and edit
+  const { userRole } = useAuth();
+  const isAdmin = userRole === 'admin';
+
   const [rickshaws, setRickshaws] = useState([]);
   const [drivers, setDrivers] = useState([]);
   const [assignments, setAssignments] = useState([]);
@@ -215,6 +220,7 @@ export default function AssignDriverVehicle() {
 
   // Delete assignment
   async function handleDelete(id) {
+    if (!isAdmin) return;
     if (!window.confirm('আপনি কি নিশ্চিত যে এই অ্যাসাইনমেন্ট রেকর্ডটি মুছে ফেলতে চান?')) return;
 
     try {
@@ -267,7 +273,9 @@ export default function AssignDriverVehicle() {
               required
             >
               <option value="">-- রিকশা/অটো নম্বর সিলেক্ট করুন --</option>
-              {rickshaws.map(r => (
+              {rickshaws
+                .filter(r => !assignments.some(a => a.status === 'active' && a.rickshaw_id === r.id))
+                .map(r => (
                 <option key={r.id} value={r.id}>
                   ID: {r.identity_no || 'N/A'} ({r.vehicle_type || 'Vehicle'}) - {r.registration_number}
                 </option>
@@ -303,7 +311,9 @@ export default function AssignDriverVehicle() {
               required
             >
               <option value="">-- ড্রাইভার নির্বাচন করুন --</option>
-              {drivers.map(d => (
+              {drivers
+                .filter(d => !assignments.some(a => a.status === 'active' && a.driver_id === d.id))
+                .map(d => (
                 <option key={d.id} value={d.id}>
                   {d.name} {d.phone ? `(${d.phone})` : ''}
                 </option>
@@ -323,32 +333,10 @@ export default function AssignDriverVehicle() {
             />
           </div>
 
-          {/* 5. Release Date */}
-          <div className="form-group">
-            <label className="form-label">৫. Release Date (রিলিজ তারিখ - অপশনাল)</label>
-            <input 
-              type="date" 
-              className="form-input" 
-              value={releaseDate}
-              onChange={(e) => setReleaseDate(e.target.value)}
-            />
-          </div>
 
-          {/* 6. Status */}
-          <div className="form-group">
-            <label className="form-label">৬. স্ট্যাটাস (Status)</label>
-            <select 
-              className="form-input" 
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-            >
-              <option value="active">Active (বর্তমানে চালাচ্ছে)</option>
-              <option value="released">Released (অব্যাহতিপ্রাপ্ত)</option>
-            </select>
-          </div>
 
           {/* Submit Button */}
-          <div className="lg:col-span-3 flex justify-end mt-1">
+          <div className="flex items-end pt-1 md:pt-[28px]">
             <button type="submit" className="btn btn-primary w-full md:w-auto md:px-12">
               সংরক্ষণ করুন
             </button>
@@ -432,13 +420,15 @@ export default function AssignDriverVehicle() {
                   >
                     <Edit2 size={15} />
                   </button>
-                  <button
+                  {isAdmin && (
+                    <button
                     onClick={() => handleDelete(item.id)}
                     className="p-2 text-red-400 rounded-lg active:bg-white/10"
                     aria-label="মুছে ফেলুন"
                   >
                     <Trash2 size={15} />
                   </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -537,13 +527,15 @@ export default function AssignDriverVehicle() {
                         >
                           <Edit2 size={16} />
                         </button>
-                        <button 
+                        {isAdmin && (
+                          <button 
                           onClick={() => handleDelete(item.id)}
                           className="p-2 text-red-400 hover:text-red-300 transition-colors rounded-lg hover:bg-white/10"
                           title="মুছে ফেলুন"
                         >
                           <Trash2 size={16} />
                         </button>
+                        )}
                       </div>
                     </td>
                   </tr>

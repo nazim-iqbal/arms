@@ -1,8 +1,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 import { Users, UserPlus, Trash2, Phone, MapPin, IdCard, User, HeartHandshake, FileText, CheckSquare, Square, Eye, X } from 'lucide-react';
+import { processGoogleDriveUrl } from '../lib/utils';
 
 export default function Drivers() {
+  // Only an admin may delete; everyone else can add and edit
+  const { userRole } = useAuth();
+  const isAdmin = userRole === 'admin';
+
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -112,6 +118,7 @@ export default function Drivers() {
   }
 
   async function deleteDriver(id) {
+    if (!isAdmin) return;
     if (!window.confirm('আপনি কি নিশ্চিত যে এই ড্রাইভারটি মুছে ফেলতে চান?')) return;
     try {
       const { error } = await supabase.from('drivers').delete().eq('id', id);
@@ -221,7 +228,7 @@ export default function Drivers() {
                 type="url" 
                 className="form-input" 
                 value={photoUrl} 
-                onChange={(e) => setPhotoUrl(e.target.value)} 
+                onChange={(e) => setPhotoUrl(processGoogleDriveUrl(e.target.value))} 
                 placeholder="https://..." 
               />
             </div>
@@ -370,13 +377,15 @@ export default function Drivers() {
                   >
                     <Eye size={14} /> বিস্তারিত
                   </button>
-                  <button 
+                  {isAdmin && (
+                    <button 
                     onClick={() => deleteDriver(driver.id)}
                     className="p-1.5 text-red-400 hover:text-red-300 transition-colors rounded-lg hover:bg-white/10"
                     title="মুছে ফেলুন"
                   >
                     <Trash2 size={16} />
                   </button>
+                  )}
                 </div>
               </div>
             ))}

@@ -1,9 +1,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 import { ArrowDownCircle, Trash2, Plus, Receipt } from 'lucide-react';
 import { today, formatDate, bn } from '../lib/date';
 
 export default function ExpenseEntry() {
+  // Only an admin may delete; everyone else can add and edit
+  const { userRole } = useAuth();
+  const isAdmin = userRole === 'admin';
+
   const [expenses, setExpenses] = useState([]);
   const [rickshaws, setRickshaws] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -79,6 +84,7 @@ export default function ExpenseEntry() {
   }
 
   async function handleDelete(id) {
+    if (!isAdmin) return;
     if (!window.confirm('আপনি কি নিশ্চিত যে এই খরচের রেকর্ডটি মুছে ফেলতে চান?')) return;
     try {
       const { error } = await supabase.from('daily_expenses').delete().eq('id', id);
@@ -218,13 +224,15 @@ export default function ExpenseEntry() {
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <span className="font-bold text-red-400 text-base">৳ {bn(expense.amount)}</span>
-                    <button
+                    {isAdmin && (
+                      <button
                       onClick={() => handleDelete(expense.id)}
                       className="p-2 text-red-400 rounded-lg active:bg-white/10"
                       aria-label="মুছে ফেলুন"
                     >
                       <Trash2 size={15} />
                     </button>
+                    )}
                   </div>
                 </div>
 
@@ -267,13 +275,15 @@ export default function ExpenseEntry() {
                     <td className="p-4 text-white/70">{expense.expense_particulars}</td>
                     <td className="p-4 text-right font-bold text-red-400">৳ {bn(expense.amount)}</td>
                     <td className="p-4 text-right">
-                      <button
+                      {isAdmin && (
+                        <button
                         onClick={() => handleDelete(expense.id)}
                         className="p-2 text-red-400 hover:text-red-300 transition-colors rounded-lg hover:bg-white/10"
                         title="মুছে ফেলুন"
                       >
                         <Trash2 size={16} />
                       </button>
+                      )}
                     </td>
                   </tr>
                 ))}

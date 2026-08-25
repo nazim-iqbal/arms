@@ -1,9 +1,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 import { Wrench, ShoppingCart, Tag, Trash2, CarFront } from 'lucide-react';
 import { today, formatDate, bn } from '../lib/date';
 
 export default function Parts() {
+  // Only an admin may delete; everyone else can add and edit
+  const { userRole } = useAuth();
+  const isAdmin = userRole === 'admin';
+
   const [transactions, setTransactions] = useState([]);
   const [rickshaws, setRickshaws] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -68,6 +73,7 @@ export default function Parts() {
   }
 
   async function deleteTransaction(id) {
+    if (!isAdmin) return;
     if (!window.confirm('Are you sure you want to delete this record?')) return;
     try {
       const { error } = await supabase.from('parts_transactions').delete().eq('id', id);
@@ -79,7 +85,7 @@ export default function Parts() {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-6">
+    <div className="flex flex-col gap-3 md:gap-6">
 
       {/* Add Transaction Form */}
       <div className={`glass-panel panel-pad border-t-4 ${type === 'purchase' ? 'border-t-orange-500' : 'border-t-[#00f2fe]'}`}>
@@ -174,13 +180,15 @@ export default function Parts() {
                   <div className="text-sm">তারিখ: {formatDate(t.transaction_date)}</div>
                 </div>
 
-                <button
+                {isAdmin && (
+                  <button
                   onClick={() => deleteTransaction(t.id)}
                   className="bg-transparent border-none text-red-400 md:hover:text-red-300 cursor-pointer p-2 transition-colors shrink-0"
                   aria-label="মুছে ফেলুন"
                 >
                   <Trash2 size={18} />
                 </button>
+                )}
               </div>
             ))}
           </div>

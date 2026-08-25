@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { LOGIN_DOMAIN } from '../lib/authClient';
 import { Lock, Mail, Eye, EyeOff, AlertCircle, ArrowRight, Loader2, ShieldCheck } from 'lucide-react';
 
 /* Side view of a three-wheeler auto rickshaw (CNG / tuk-tuk) */
@@ -14,6 +15,13 @@ const AutoRickshawIcon = ({ size = 24, className = "" }) => (
     <circle cx="17.5" cy="17.5" r="2.5" />
   </svg>
 );
+
+// Users created from the User Management screen log in with just their 4-digit
+// user number; Supabase Auth needs an email, so the domain is appended here.
+const toAuthEmail = (value) => {
+  const v = value.trim();
+  return v.includes('@') ? v : `${v.toLowerCase()}@${LOGIN_DOMAIN}`;
+};
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -31,7 +39,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      await login(email, password);
+      await login(toAuthEmail(email), password);
       navigate('/');
     } catch (err) {
       setError('Login failed: ' + err.message);
@@ -122,7 +130,7 @@ export default function Login() {
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               <div className="group animate-fade-up delay-200">
                 <label className="block text-sm font-medium text-white/70 mb-1.5 group-focus-within:text-[#00f2fe] transition-colors">
-                  Email Address
+                  ইউজার নাম্বার বা ইমেইল
                 </label>
                 <div className="relative">
                   <Mail
@@ -131,12 +139,12 @@ export default function Login() {
                       group-focus-within:text-[#00f2fe] group-focus-within:scale-110"
                   />
                   <input
-                    type="email"
+                    type="text"
                     className="form-input pl-12 bg-black/30 hover:border-white/25"
-                    placeholder="admin@example.com"
+                    placeholder="1001  অথবা  admin@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    autoComplete="email"
+                    autoComplete="username"
                     required
                   />
                 </div>

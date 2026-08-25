@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, NavLink, Navigate, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Users, Wrench, Menu, X, LogOut, Shield, PiggyBank, UserCheck, ArrowUpCircle, ArrowDownCircle, HandCoins } from 'lucide-react';
+import { BrowserRouter as Router, Routes, Route, Link, NavLink, Navigate, Outlet } from 'react-router-dom';
+import { LayoutDashboard, Users, Wrench, Menu, X, LogOut, Shield, PiggyBank, UserCheck, ArrowUpCircle, ArrowDownCircle, HandCoins, KeyRound } from 'lucide-react';
 import './index.css';
 
 import Rickshaws from './pages/Rickshaws';
@@ -12,6 +12,7 @@ import Dashboard from './pages/Dashboard';
 import Parts from './pages/Parts';
 import Login from './pages/Login';
 import UsersPage from './pages/Users';
+import ChangePassword from './pages/ChangePassword';
 import SetDailyDeposit from './pages/SetDailyDeposit';
 import AssignDriverVehicle from './pages/AssignDriverVehicle';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -145,10 +146,15 @@ const Header = ({ setIsSidebarOpen }) => {
         <div className="font-bold text-xs md:text-lg text-[#00f2fe] tabular-nums">
           {time.toLocaleTimeString()}
         </div>
-        <div className="hidden md:flex items-center gap-2 font-medium text-gray-300">
+        <Link
+          to="/change-password"
+          className="flex items-center gap-2 font-medium text-gray-300 px-2 py-1.5 rounded-lg hover:text-white hover:bg-white/10 transition-colors"
+          title="পাসওয়ার্ড পরিবর্তন"
+        >
           <UserCheck size={20} className="text-[#00f2fe]" />
-          <span>{user?.email?.split('@')[0] || 'User'}</span>
-        </div>
+          <span className="hidden md:inline">{user?.email?.split('@')[0] || 'User'}</span>
+          <KeyRound size={14} className="text-white/40" />
+        </Link>
         <button
           onClick={() => logout()}
           className="flex items-center gap-2 px-2.5 py-1.5 md:px-4 md:py-2 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg hover:bg-red-500 hover:text-white transition-all duration-300 text-sm font-semibold shrink-0"
@@ -204,6 +210,7 @@ function App() {
             <Route path="/finances" element={<Navigate to="/deposits" replace />} />
             <Route path="/parts" element={<Parts />} />
             <Route path="/users" element={<UsersPage />} />
+            <Route path="/change-password" element={<ChangePassword />} />
           </Route>
         </Routes>
       </Router>

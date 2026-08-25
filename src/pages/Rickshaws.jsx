@@ -1,9 +1,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 import { CarFront, Plus, Trash2, Hash } from 'lucide-react';
 import { bn } from '../lib/date';
 
 export default function Rickshaws() {
+  // Only an admin may delete; everyone else can add and edit
+  const { userRole } = useAuth();
+  const isAdmin = userRole === 'admin';
+
   const [rickshaws, setRickshaws] = useState([]);
   const [loading, setLoading] = useState(true);
   const [identityNo, setIdentityNo] = useState('');
@@ -138,6 +143,7 @@ export default function Rickshaws() {
   }
 
   async function deleteRickshaw(id) {
+    if (!isAdmin) return;
     if (!window.confirm('আপনি কি নিশ্চিত যে এই গাড়িটি মুছে ফেলতে চান?')) return;
     
     try {
@@ -321,13 +327,15 @@ export default function Rickshaws() {
                   </div>
                 </div>
                 
-                <button 
+                {isAdmin && (
+                  <button 
                   onClick={() => deleteRickshaw(rickshaw.id)}
                   className="bg-transparent border-none text-red-400 md:hover:text-red-300 cursor-pointer p-2 transition-colors shrink-0"
                   title="মুছে ফেলুন"
                 >
                   <Trash2 size={20} />
                 </button>
+                )}
               </div>
             ))}
           </div>

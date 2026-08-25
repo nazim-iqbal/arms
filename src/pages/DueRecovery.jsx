@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 import { today, formatDate, bn } from '../lib/date';
 import { buildDueBalances, listDebtors, orphanDue as sumOrphanDue } from '../lib/due';
 import {
@@ -8,6 +9,10 @@ import {
 } from 'lucide-react';
 
 export default function DueRecovery() {
+  // Only an admin may delete; everyone else can add and edit
+  const { userRole } = useAuth();
+  const isAdmin = userRole === 'admin';
+
   const [drivers, setDrivers] = useState([]);
   const [dueRows, setDueRows] = useState([]);        // deposits that left a বাকী
   const [recoveries, setRecoveries] = useState([]);  // everything recovered so far
@@ -139,6 +144,7 @@ export default function DueRecovery() {
   }
 
   async function handleDelete(id) {
+    if (!isAdmin) return;
     if (!window.confirm('আপনি কি নিশ্চিত যে এই আদায়ের রেকর্ডটি মুছে ফেলতে চান?\nমুছে ফেললে টাকাটি আবার বাকীতে যোগ হয়ে যাবে।')) return;
     try {
       const { error } = await supabase.from('due_recoveries').delete().eq('id', id);
@@ -394,13 +400,15 @@ export default function DueRecovery() {
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <span className="font-bold text-[#10B981] text-base">৳ {bn(r.amount)}</span>
-                    <button
+                    {isAdmin && (
+                      <button
                       onClick={() => handleDelete(r.id)}
                       className="p-2 text-red-400 rounded-lg active:bg-white/10"
                       aria-label="মুছে ফেলুন"
                     >
                       <Trash2 size={15} />
                     </button>
+                    )}
                   </div>
                 </div>
 
@@ -458,13 +466,15 @@ export default function DueRecovery() {
                       {r.remarks || '—'}
                     </td>
                     <td className="p-4 text-right">
-                      <button
+                      {isAdmin && (
+                        <button
                         onClick={() => handleDelete(r.id)}
                         className="p-2 text-red-400 hover:text-red-300 transition-colors rounded-lg hover:bg-white/10"
                         title="মুছে ফেলুন"
                       >
                         <Trash2 size={16} />
                       </button>
+                      )}
                     </td>
                   </tr>
                 ))}

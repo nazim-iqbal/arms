@@ -1,9 +1,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 import { ArrowUpCircle, Trash2, Hash, PiggyBank, Wallet, AlertTriangle, MessageSquare, Plus, User } from 'lucide-react';
 import { today, formatDate, bn } from '../lib/date';
 
 export default function DepositEntry() {
+  // Only an admin may delete; everyone else can add and edit
+  const { userRole } = useAuth();
+  const isAdmin = userRole === 'admin';
+
   const [incomes, setIncomes] = useState([]);
   const [rickshaws, setRickshaws] = useState([]);
   const [depositRates, setDepositRates] = useState([]);
@@ -156,6 +161,7 @@ export default function DepositEntry() {
   }
 
   async function handleDelete(id) {
+    if (!isAdmin) return;
     if (!window.confirm('আপনি কি নিশ্চিত যে এই জমার রেকর্ডটি মুছে ফেলতে চান?')) return;
     try {
       const { error } = await supabase.from('daily_incomes').delete().eq('id', id);
@@ -384,13 +390,15 @@ export default function DepositEntry() {
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <span className="font-bold text-[#10B981] text-base">৳ {bn(income.amount)}</span>
-                    <button
+                    {isAdmin && (
+                      <button
                       onClick={() => handleDelete(income.id)}
                       className="p-2 text-red-400 rounded-lg active:bg-white/10"
                       aria-label="মুছে ফেলুন"
                     >
                       <Trash2 size={15} />
                     </button>
+                    )}
                   </div>
                 </div>
 
@@ -475,13 +483,15 @@ export default function DepositEntry() {
                       {income.remarks || '—'}
                     </td>
                     <td className="p-4 text-right">
-                      <button
+                      {isAdmin && (
+                        <button
                         onClick={() => handleDelete(income.id)}
                         className="p-2 text-red-400 hover:text-red-300 transition-colors rounded-lg hover:bg-white/10"
                         title="মুছে ফেলুন"
                       >
                         <Trash2 size={16} />
                       </button>
+                      )}
                     </td>
                   </tr>
                 ))}

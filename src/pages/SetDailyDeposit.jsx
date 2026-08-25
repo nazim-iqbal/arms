@@ -1,12 +1,19 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { PiggyBank, Plus, Trash2, Edit2, CheckCircle2, XCircle, CarFront, Hash, DollarSign } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { PiggyBank, Plus, Trash2, Edit2, CheckCircle2, XCircle, CarFront, Hash, DollarSign, LogOut } from 'lucide-react';
 import { today, formatDate, bn } from '../lib/date';
 
 export default function SetDailyDeposit() {
+  // Only an admin may delete; everyone else can add and edit
+  const { userRole } = useAuth();
+  const isAdmin = userRole === 'admin';
+
   const [rickshaws, setRickshaws] = useState([]);
   const [depositSettings, setDepositSettings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [filterIdentityNo, setFilterIdentityNo] = useState('all');
 
   // Form State
   const [selectedRickshawId, setSelectedRickshawId] = useState('');
@@ -70,6 +77,7 @@ export default function SetDailyDeposit() {
   // Add new daily deposit setting
   async function handleSubmit(e) {
     e.preventDefault();
+    if (submitting) return;
 
     if (!selectedRickshawId) {
       alert('অনুগ্রহ করে একটি পরিচিতি নম্বর (যানবাহন) নির্বাচন করুন।');
@@ -81,10 +89,11 @@ export default function SetDailyDeposit() {
     }
 
     try {
+      setSubmitting(true);
       // Automatically set existing active settings for this vehicle to 'inactive'
       await supabase
         .from('daily_deposit_settings')
-        .update({ status: 'inactive' })
+        .update({ status: 'inactive', release_date: entryDate })
         .eq('rickshaw_id', selectedRickshawId)
         .eq('status', 'active');
 
@@ -113,6 +122,25 @@ export default function SetDailyDeposit() {
       alert('দৈনিক জমা পরিমাণ সফলভাবে সেট করা হয়েছে!');
     } catch (error) {
       alert('Error adding daily deposit setting: ' + error.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // Quick Release deposit setting
+  async function handleQuickRelease(item) {
+    if (!window.confirm('আপনি কি এই জমার হিসাবটি রিলিজ (ইনঅ্যাকটিভ) করতে চান?')) return;
+    
+    try {
+      const { error } = await supabase
+        .from('daily_deposit_settings')
+        .update({ status: 'inactive', release_date: today() })
+        .eq('id', item.id);
+
+      if (error) throw error;
+      await fetchData();
+    } catch (error) {
+      alert('Error releasing setting: ' + error.message);
     }
   }
 
@@ -141,6 +169,7 @@ export default function SetDailyDeposit() {
 
   // Delete deposit setting
   async function handleDelete(id) {
+    if (!isAdmin) return;
     if (!window.confirm('আপনি কি নিশ্চিত যে এই রেকর্ডটি মুছে ফেলতে চান?')) return;
 
     try {
@@ -155,6 +184,9 @@ export default function SetDailyDeposit() {
       alert('Error deleting setting: ' + error.message);
     }
   }
+
+  const uniqueIdentityNos = [...new Set(depositSettings.map(item => item.rickshaws?.identity_no).filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, {numeric: true}));
+  const filteredSettings = filterIdentityNo === 'all' ? depositSettings : depositSettings.filter(item => item.rickshaws?.identity_no === filterIdentityNo);
 
   return (
     <div className="flex flex-col gap-3 md:gap-6">
@@ -192,7 +224,9 @@ export default function SetDailyDeposit() {
               required
             >
               <option value="">-- পরিচিতি নম্বর নির্বাচন করুন --</option>
-              {rickshaws.map(r => (
+              {rickshaws
+                .filter(r => !depositSettings.some(d => d.status === 'active' && d.rickshaw_id === r.id))
+                .map(r => (
                 <option key={r.id} value={r.id}>
                   ID: {r.identity_no || 'N/A'} ({r.vehicle_type || 'Vehicle'}) - {r.registration_number}
                 </option>
@@ -247,8 +281,8 @@ export default function SetDailyDeposit() {
 
           {/* Submit Button */}
           <div className="lg:col-span-4 flex justify-end mt-1">
-            <button type="submit" className="btn btn-primary w-full md:w-auto md:px-12">
-              সংরক্ষণ করুন
+            <button type="submit" disabled={submitting} className="btn btn-primary w-full md:w-auto md:px-12 disabled:opacity-60">
+              {submitting ? 'সংরক্ষণ হচ্ছে...' : 'সংরক্ষণ করুন'}
             </button>
           </div>
 
@@ -257,19 +291,36 @@ export default function SetDailyDeposit() {
 
       {/* List Table Section */}
       <div className="glass-panel panel-pad w-full">
-        <h3 className="panel-title text-[#00f2fe]">
-          <PiggyBank size={20} /> সেট করা দৈনিক জমার তালিকা
-        </h3>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-white/10 pb-3 mb-4">
+          <h3 className="text-[#00f2fe] text-lg font-bold flex items-center gap-2">
+            <PiggyBank size={20} /> সেট করা দৈনিক জমার তালিকা
+          </h3>
+          <div className="flex items-center gap-2 w-full sm:w-auto bg-[#00f2fe]/10 p-1.5 rounded-lg border border-[#00f2fe]/30">
+            <Hash size={16} className="text-[#00f2fe] ml-1" />
+            <select 
+              className="bg-transparent text-[#00f2fe] font-bold text-sm focus:outline-none cursor-pointer pr-2"
+              value={filterIdentityNo}
+              onChange={(e) => setFilterIdentityNo(e.target.value)}
+            >
+              <option value="all" className="bg-[#111119] text-white">সব রিকশা (All)</option>
+              {uniqueIdentityNos.map(idNo => (
+                <option key={idNo} value={idNo} className="bg-[#111119] text-white">ID: {idNo}</option>
+              ))}
+            </select>
+          </div>
+        </div>
 
         {loading ? (
           <p className="text-white/60 animate-pulse text-center py-8">লোড হচ্ছে...</p>
         ) : depositSettings.length === 0 ? (
           <p className="text-white/60 text-center py-8">এখনো কোনো দৈনিক জমা সেট করা হয়নি।</p>
+        ) : filteredSettings.length === 0 ? (
+          <p className="text-white/60 text-center py-8">এই পরিচিতি নম্বরের কোনো রেকর্ড নেই।</p>
         ) : (
           <>
           {/* Phone view: one card per record instead of a 7-column table */}
           <div className="md:hidden flex flex-col gap-2.5">
-            {depositSettings.map(item => (
+            {filteredSettings.map(item => (
               <div key={item.id} className="rec-card">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex flex-col gap-1 min-w-0">
@@ -277,8 +328,9 @@ export default function SetDailyDeposit() {
                       <span className="id-badge"><Hash size={11} />{item.rickshaws?.identity_no || 'N/A'}</span>
                       <span className="text-white/85 text-sm font-semibold">{item.rickshaws?.registration_number || 'N/A'}</span>
                     </span>
-                    <span className="text-white/45 text-xs">
-                      {item.rickshaws?.vehicle_type || 'N/A'} · {formatDate(item.entry_date)}
+                    <span className="text-white/45 text-xs mt-1 block">
+                      এন্ট্রি: {formatDate(item.entry_date)}
+                      {item.release_date && ` · রিলিজ: ${formatDate(item.release_date)}`}
                     </span>
                   </div>
                   <span className="text-lg font-bold text-emerald-400 shrink-0">৳ {bn(item.daily_joma_amount)}</span>
@@ -296,6 +348,14 @@ export default function SetDailyDeposit() {
                   )}
 
                   <div className="flex items-center gap-1">
+                    {item.status === 'active' && (
+                      <button
+                        onClick={() => handleQuickRelease(item)}
+                        className="btn btn-secondary !py-1.5 !px-3 text-xs text-orange-400 border-orange-500/30 flex items-center gap-1 mr-1"
+                      >
+                        <LogOut size={13} /> রিলিজ
+                      </button>
+                    )}
                     <button
                       onClick={() => {
                         setEditingItem(item);
@@ -307,13 +367,15 @@ export default function SetDailyDeposit() {
                     >
                       <Edit2 size={15} />
                     </button>
-                    <button
+                    {isAdmin && (
+                      <button
                       onClick={() => handleDelete(item.id)}
                       className="p-2 text-red-400 rounded-lg active:bg-white/10"
                       aria-label="মুছে ফেলুন"
                     >
                       <Trash2 size={15} />
                     </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -330,12 +392,13 @@ export default function SetDailyDeposit() {
                   <th className="p-4">যানবাহনের ধরন</th>
                   <th className="p-4">দৈনিক জমা (৳)</th>
                   <th className="p-4">এন্ট্রি তারিখ</th>
+                  <th className="p-4">রিলিজ তারিখ</th>
                   <th className="p-4">অবস্থা</th>
                   <th className="p-4 text-right">অ্যাকশন</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 text-sm text-white/80">
-                {depositSettings.map(item => (
+                {filteredSettings.map(item => (
                   <tr 
                     key={item.id}
                     className="hover:bg-white/5 transition-colors duration-150"
@@ -369,6 +432,11 @@ export default function SetDailyDeposit() {
                       {formatDate(item.entry_date)}
                     </td>
 
+                    {/* Release Date */}
+                    <td className="p-4 text-white/70 font-mono">
+                      {item.release_date ? formatDate(item.release_date) : '-'}
+                    </td>
+
                     {/* Status Badge */}
                     <td className="p-4">
                       {item.status === 'active' ? (
@@ -385,6 +453,15 @@ export default function SetDailyDeposit() {
                     {/* Actions */}
                     <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        {item.status === 'active' && (
+                          <button 
+                            onClick={() => handleQuickRelease(item)}
+                            className="btn btn-secondary !py-1 !px-2.5 text-xs text-orange-400 border-orange-500/30 hover:bg-orange-500/10 flex items-center gap-1"
+                            title="রিলিজ করুন"
+                          >
+                            <LogOut size={13} /> রিলিজ
+                          </button>
+                        )}
                         <button 
                           onClick={() => {
                             setEditingItem(item);
@@ -396,13 +473,15 @@ export default function SetDailyDeposit() {
                         >
                           <Edit2 size={16} />
                         </button>
-                        <button 
+                        {isAdmin && (
+                          <button 
                           onClick={() => handleDelete(item.id)}
                           className="p-2 text-red-400 hover:text-red-300 transition-colors rounded-lg hover:bg-white/10"
                           title="মুছে ফেলুন"
                         >
                           <Trash2 size={16} />
                         </button>
+                        )}
                       </div>
                     </td>
                   </tr>

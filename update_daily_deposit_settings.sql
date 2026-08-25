@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS public.daily_deposit_settings (
     rickshaw_id UUID REFERENCES public.rickshaws(id) ON DELETE CASCADE NOT NULL,
     daily_joma_amount NUMERIC(10, 2) NOT NULL,
     entry_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    release_date DATE,
     status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive')) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
