@@ -26,6 +26,13 @@ export default function DepositEntry() {
   const [dueAmount, setDueAmount] = useState('');      // বাকী (auto calculated)
   const [remarks, setRemarks] = useState('');
 
+  // Filter state
+  const [filterRickshawId, setFilterRickshawId] = useState('');
+
+  const filteredIncomes = filterRickshawId
+    ? incomes.filter(income => income.rickshaw_id === filterRickshawId)
+    : incomes;
+
   const selectedRickshaw = rickshaws.find(r => r.id === rickshawId);
   // Whoever currently holds the selected vehicle — any বাকী is charged to them
   const selectedAssignment = assignments.find(a => a.rickshaw_id === rickshawId);
@@ -91,6 +98,18 @@ export default function DepositEntry() {
     setDailyJoma(joma);
     setCashAmount(joma);
     setDueAmount(joma ? '0' : '');
+  }
+
+  // Daily joma changed manually -> recalculate due amount
+  function handleDailyJomaChange(value) {
+    const joma = value.replace(/\D/g, '');
+    setDailyJoma(joma);
+    if (joma === '') {
+      setDueAmount('');
+      return;
+    }
+    const remaining = Number(joma) - Number(cashAmount || 0);
+    setDueAmount(String(remaining > 0 ? remaining : 0));
   }
 
   // Cash reduced -> the remaining part automatically becomes "বাকী"
@@ -230,15 +249,17 @@ export default function DepositEntry() {
             </select>
           </div>
 
-          {/* 2. Daily joma (auto) */}
+          {/* 2. Daily joma (auto but editable) */}
           <div className="form-group !mb-0">
-            <label className="form-label">দৈনিক জমার পরিমাণ (Auto-filled ৳)</label>
+            <label className="form-label">দৈনিক জমার পরিমাণ (৳)</label>
             <div className="relative">
               <input
                 type="text"
-                className="form-input bg-white/5 text-emerald-400 font-bold text-lg cursor-not-allowed"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                className="form-input text-emerald-400 font-bold text-lg"
                 value={dailyJoma}
-                readOnly
+                onChange={(e) => handleDailyJomaChange(e.target.value)}
                 placeholder={rickshawId ? 'এই গাড়ির দৈনিক জমা সেট করা নেই' : 'রিক্সা সিলেক্ট করলে চলে আসবে'}
               />
               <PiggyBank size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-400/50 pointer-events-none" />
@@ -357,19 +378,36 @@ export default function DepositEntry() {
 
       {/* Recent deposits */}
       <div className="glass-panel panel-pad w-full">
-        <h3 className="panel-title text-[#10B981]">
-          <ArrowUpCircle size={20} /> সাম্প্রতিক জমা সমূহ
-        </h3>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+          <h3 className="panel-title text-[#10B981] !mb-0">
+            <ArrowUpCircle size={20} /> সাম্প্রতিক জমা সমূহ
+          </h3>
+
+          <div className="w-full sm:w-auto min-w-[200px]">
+            <select
+              className="form-input py-2 text-sm"
+              value={filterRickshawId}
+              onChange={(e) => setFilterRickshawId(e.target.value)}
+            >
+              <option value="">সব রিকশা/অটো (All)</option>
+              {rickshaws.map(r => (
+                <option key={r.id} value={r.id}>
+                  ID: {r.identity_no || 'N/A'} - {r.registration_number}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
 
         {loading ? (
           <p className="text-white/60 animate-pulse text-center py-8">লোড হচ্ছে...</p>
-        ) : incomes.length === 0 ? (
-          <p className="text-white/60 text-center py-8">কোনো জমা নেই।</p>
+        ) : filteredIncomes.length === 0 ? (
+          <p className="text-white/60 text-center py-8">কোনো রেকর্ড পাওয়া যায়নি।</p>
         ) : (
           <>
           {/* Phone view: one card per record instead of a 8-column table */}
           <div className="md:hidden flex flex-col gap-2.5">
-            {incomes.map(income => (
+            {filteredIncomes.map(income => (
               <div key={income.id} className="rec-card">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex flex-col gap-1 min-w-0">
@@ -447,7 +485,7 @@ export default function DepositEntry() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 text-sm text-white/80">
-                {incomes.map(income => (
+                {filteredIncomes.map(income => (
                   <tr key={income.id} className="hover:bg-white/5 transition-colors duration-150">
                     <td className="p-4 whitespace-nowrap text-white/70 font-mono">{formatDate(income.date)}</td>
                     <td className="p-4 whitespace-nowrap">

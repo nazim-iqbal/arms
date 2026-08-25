@@ -203,11 +203,13 @@ export default function DueRecovery() {
               required
             >
               <option value="">-- ড্রাইভার নির্বাচন করুন --</option>
-              {drivers.map((d) => {
+              {drivers
+                .filter(d => (balances[d.id]?.outstanding || 0) > 0)
+                .map((d) => {
                 const bal = balances[d.id]?.outstanding || 0;
                 return (
                   <option key={d.id} value={d.id}>
-                    {d.name}{d.phone ? ` (${d.phone})` : ''}{bal > 0 ? ` — বাকী ৳${bal}` : ''}
+                    {d.name}{d.phone ? ` (${d.phone})` : ''} — বাকী ৳{bal}
                   </option>
                 );
               })}

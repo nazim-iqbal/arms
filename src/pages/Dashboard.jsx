@@ -152,10 +152,14 @@ const RANGES = [
   { key: '3d', label: 'গত ৩ দিন', back: 2 },
   { key: '7d', label: 'গত ৭ দিন', back: 6 },
   { key: '30d', label: 'গত মাস', back: 29 },
+  { key: 'all', label: 'সকল', all: true },
 ];
 
 function resolveRange(key) {
   const r = RANGES.find((x) => x.key === key) || RANGES[0];
+  if (r.all) {
+    return { key: r.key, label: r.label, from: '2000-01-01', to: today(), all: true };
+  }
   const from = daysAgo(r.back);
   return { key: r.key, label: r.label, from, to: r.single ? from : today() };
 }
@@ -861,9 +865,11 @@ export default function Dashboard() {
       )}
 
       <p className="text-white/45 text-xs md:text-sm mt-2 mb-3 md:mb-4">
-        {range.from === range.to
-          ? formatDate(range.from)
-          : `${formatDate(range.from)} — ${formatDate(range.to)}`}
+        {range.all
+          ? 'শুরু থেকে আজ পর্যন্ত সকল লেনদেন'
+          : range.from === range.to
+            ? formatDate(range.from)
+            : `${formatDate(range.from)} — ${formatDate(range.to)}`}
         {' · '}যেকোনো কার্ডে ট্যাপ করলে বিস্তারিত রিপোর্ট দেখা যাবে।
       </p>
 

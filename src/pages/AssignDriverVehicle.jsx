@@ -28,6 +28,12 @@ export default function AssignDriverVehicle() {
   const [editReleaseDate, setEditReleaseDate] = useState('');
   const [editStatus, setEditStatus] = useState('active');
 
+  // Filter State
+  const [filterRickshawId, setFilterRickshawId] = useState('');
+
+  const filteredAssignments = filterRickshawId
+    ? assignments.filter(item => item.rickshaw_id === filterRickshawId)
+    : assignments;
   useEffect(() => {
     fetchData();
   }, []);
@@ -347,19 +353,36 @@ export default function AssignDriverVehicle() {
 
       {/* List Table Section */}
       <div className="glass-panel panel-pad w-full">
-        <h3 className="panel-title text-[#00f2fe]">
-          <UserCheck size={20} /> ড্রাইভার অ্যাসাইনমেন্ট তালিকা
-        </h3>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+          <h3 className="panel-title text-[#00f2fe] !mb-0">
+            <UserCheck size={20} /> ড্রাইভার অ্যাসাইনমেন্ট তালিকা
+          </h3>
+          
+          <div className="w-full sm:w-auto min-w-[200px]">
+            <select
+              className="form-input py-2 text-sm"
+              value={filterRickshawId}
+              onChange={(e) => setFilterRickshawId(e.target.value)}
+            >
+              <option value="">সব রিকশা/অটো (All)</option>
+              {rickshaws.map(r => (
+                <option key={r.id} value={r.id}>
+                  ID: {r.identity_no || 'N/A'} - {r.registration_number}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
 
         {loading ? (
           <p className="text-white/60 animate-pulse text-center py-8">লোড হচ্ছে...</p>
-        ) : assignments.length === 0 ? (
-          <p className="text-white/60 text-center py-8">এখনো কোনো অ্যাসাইনমেন্ট রেকর্ড নেই।</p>
+        ) : filteredAssignments.length === 0 ? (
+          <p className="text-white/60 text-center py-8">কোনো রেকর্ড পাওয়া যায়নি।</p>
         ) : (
           <>
           {/* Phone view: one card per assignment instead of an 8-column table */}
           <div className="md:hidden flex flex-col gap-2.5">
-            {assignments.map(item => (
+            {filteredAssignments.map(item => (
               <div key={item.id} className="rec-card">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex flex-col gap-1 min-w-0">
@@ -450,7 +473,7 @@ export default function AssignDriverVehicle() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 text-sm text-white/80">
-                {assignments.map(item => (
+                {filteredAssignments.map(item => (
                   <tr 
                     key={item.id}
                     className="hover:bg-white/5 transition-colors duration-150"
