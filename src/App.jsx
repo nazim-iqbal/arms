@@ -70,9 +70,9 @@ const NavItem = ({ to, icon: Icon, label, onNavigate }) => (
 );
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
-  // A plain 'user' only ever enters money — the four entry screens and
-  // nothing else. ProtectedLayout blocks the other routes as well, so
-  // typing the URL by hand does not get around this.
+  // A plain 'user' sees the dashboard and the four entry screens; the
+  // setup screens stay hidden. RequireRole blocks those routes as well,
+  // so typing the URL by hand does not get around this.
   const { userRole, isAdmin, isSuperAdmin } = useAuth();
   const isEntryOnly = userRole === 'user';
   const closeSidebar = () => setIsOpen(false);
@@ -101,9 +101,11 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         </div>
 
         <nav className="flex flex-col gap-1 flex-1">
+          {/* Dashboard — every role sees it */}
+          <NavItem to="/" icon={LayoutDashboard} label="Dashboard" onNavigate={closeSidebar} />
+
           {!isEntryOnly && (
             <>
-              <NavItem to="/" icon={LayoutDashboard} label="Dashboard" onNavigate={closeSidebar} />
               <NavItem to="/rickshaws" icon={AutoRickshawIcon} label="New Vehicle Entry" onNavigate={closeSidebar} />
               <NavItem to="/daily-deposits" icon={PiggyBank} label="Set Daily Deposit" onNavigate={closeSidebar} />
               <NavItem to="/drivers" icon={Users} label="Drivers" onNavigate={closeSidebar} />
@@ -129,6 +131,51 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     </>
   );
 };
+
+/**
+ * Phone-only bottom bar. The dashboard plus the three money screens stay
+ * within thumb reach, so an entry user never has to open the sidebar.
+ * Hidden from lg upwards, where the sidebar is always on screen anyway.
+ */
+const BOTTOM_NAV = [
+  { to: '/',             icon: LayoutDashboard,  label: 'ড্যাশবোর্ড' },
+  { to: '/deposits',     icon: ArrowUpCircle,    label: 'জমা' },
+  { to: '/expenses',     icon: ArrowDownCircle,  label: 'খরচ' },
+  { to: '/due-recovery', icon: HandCoins,        label: 'বকেয়া' },
+];
+
+const BottomNav = () => (
+  <nav
+    className="lg:hidden fixed bottom-0 inset-x-0 z-30 flex
+               bg-[#0a1738]/95 backdrop-blur-md border-t border-[#1e3a8a]/60
+               shadow-[0_-4px_20px_-6px_rgba(0,0,0,0.8)] pb-[env(safe-area-inset-bottom)]"
+  >
+    {BOTTOM_NAV.map(({ to, icon: Icon, label }) => (
+      <NavLink
+        key={to}
+        to={to}
+        end={to === '/'}
+        className={({ isActive }) =>
+          `flex-1 flex flex-col items-center gap-0.5 pt-1 pb-1.5 text-[11px] font-semibold
+           transition-colors active:bg-white/5 ${isActive ? 'text-[#00f2fe]' : 'text-slate-400'}`
+        }
+      >
+        {({ isActive }) => (
+          <>
+            {/* Thin cap that lights up on the screen you are standing on */}
+            <span
+              className={`h-[3px] w-8 rounded-full transition-all duration-300 ${
+                isActive ? 'bg-[#00f2fe] shadow-[0_0_8px_rgba(0,242,254,0.8)]' : 'bg-transparent'
+              }`}
+            />
+            <Icon size={21} className="shrink-0" />
+            <span>{label}</span>
+          </>
+        )}
+      </NavLink>
+    ))}
+  </nav>
+);
 
 /**
  * Which শাখা the whole app is looking at.
@@ -233,7 +280,7 @@ const Header = ({ setIsSidebarOpen }) => {
 const RequireRole = ({ allow, children }) => {
   const { userRole } = useAuth();
   if (!allow(userRole)) {
-    return <Navigate to={userRole === 'user' ? '/deposits' : '/'} replace />;
+    return <Navigate to="/" replace />;
   }
   return children;
 };
@@ -256,10 +303,12 @@ const ProtectedLayout = () => {
       <main className="flex-1 min-w-0 flex flex-col relative">
         <Header setIsSidebarOpen={setIsSidebarOpen} />
 
-        <div className="flex-1 min-w-0 p-3 sm:p-4 md:p-6 lg:p-8">
+        <div className="flex-1 min-w-0 p-3 pb-24 sm:p-4 sm:pb-24 md:p-6 md:pb-24 lg:p-8">
           <Outlet />
         </div>
       </main>
+
+      <BottomNav />
     </div>
   );
 };
@@ -274,7 +323,7 @@ function App() {
 
           {/* Protected Routes */}
           <Route element={<ProtectedLayout />}>
-            <Route path="/" element={<RequireRole allow={notEntryOnly}><Dashboard /></RequireRole>} />
+            <Route path="/" element={<Dashboard />} />
             <Route path="/rickshaws" element={<RequireRole allow={notEntryOnly}><Rickshaws /></RequireRole>} />
             <Route path="/daily-deposits" element={<RequireRole allow={notEntryOnly}><SetDailyDeposit /></RequireRole>} />
             <Route path="/drivers" element={<RequireRole allow={notEntryOnly}><Drivers /></RequireRole>} />

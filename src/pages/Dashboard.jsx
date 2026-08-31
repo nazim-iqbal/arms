@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { today, daysAgo, formatDate, bn } from '../lib/date';
 import { buildDueBalances, listDebtors, orphanDue } from '../lib/due';
@@ -6,8 +7,18 @@ import { useBranch } from '../contexts/BranchContext';
 import {
   CarFront, Users, DollarSign, TrendingUp, TrendingDown, Activity,
   X, ChevronRight, RefreshCw, Loader2, AlertTriangle, Wallet, Hash, Phone, Menu, User, HandCoins,
-  Search, CalendarRange, Building2
+  Search, CalendarRange, Building2, ArrowUpCircle, ArrowDownCircle
 } from 'lucide-react';
+
+/* ------------------------------------------------------------------ */
+/* Quick actions — the three entry forms, one tap away on a phone      */
+/* without going through the sidebar                                   */
+/* ------------------------------------------------------------------ */
+const QUICK_ACTIONS = [
+  { to: '/deposits',     label: 'Deposit Entry', icon: ArrowUpCircle,   color: 'text-emerald-400', tile: 'bg-emerald-500/10 border-emerald-500/25' },
+  { to: '/expenses',     label: 'Expense Entry', icon: ArrowDownCircle, color: 'text-rose-400',    tile: 'bg-rose-500/10 border-rose-500/25' },
+  { to: '/due-recovery', label: 'Due Recovery',  icon: HandCoins,       color: 'text-amber-400',   tile: 'bg-amber-500/10 border-amber-500/25' },
+];
 
 /* ------------------------------------------------------------------ */
 /* Stat card — tap to open the matching detail report                  */
@@ -805,6 +816,24 @@ export default function Dashboard() {
           <RefreshCw size={18} />
         </button>
       </div>
+
+      {/* The three entry forms — big tap targets so a phone needs no sidebar */}
+      <nav className="grid grid-cols-3 gap-2 sm:gap-3 mb-4 md:mb-5">
+        {QUICK_ACTIONS.map(({ to, label, icon: Icon, color, tile }) => (
+          <Link
+            key={to}
+            to={to}
+            aria-label={label}
+            className={`glass-panel flex flex-col items-center justify-center gap-1.5 px-2 py-3.5 sm:py-4
+                        ${tile} active:scale-[0.97]`}
+          >
+            <Icon className={`w-7 h-7 sm:w-8 sm:h-8 shrink-0 ${color}`} />
+            <span className="text-[11px] sm:text-sm font-semibold text-white/85 text-center leading-tight">
+              {label}
+            </span>
+          </Link>
+        ))}
+      </nav>
 
       {/* Time-window selector — scrolls sideways on narrow phones */}
       <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-3 px-3 sm:mx-0 sm:px-0 sm:flex-wrap">
