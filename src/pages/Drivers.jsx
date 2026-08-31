@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useBranch } from '../contexts/BranchContext';
+import { BranchField, BranchTag } from '../components/BranchField';
 import { Users, UserPlus, Trash2, Phone, MapPin, IdCard, User, HeartHandshake, FileText, CheckSquare, Square, Eye, X } from 'lucide-react';
 import { processGoogleDriveUrl } from '../lib/utils';
 
 export default function Drivers() {
   // Only an admin may delete; everyone else can add and edit
-  const { userRole } = useAuth();
-  const isAdmin = userRole === 'admin';
+  const { isAdmin } = useAuth();
+  const { activeBranchId, scopeQuery } = useBranch();
+  const [branchId, setBranchId] = useState('');       // কোন শাখার ড্রাইভার
 
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -31,15 +34,16 @@ export default function Drivers() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeBranchId]);
 
   async function fetchData() {
     try {
       setLoading(true);
       // Fetch Drivers
-      const { data: driverData, error: driverError } = await supabase
+      const { data: driverData, error: driverError } = await scopeQuery(supabase
         .from('drivers')
-        .select('*')
+        .select('*'))
         .order('created_at', { ascending: false });
       if (driverError) throw driverError;
       setDrivers(driverData || []);
@@ -74,11 +78,16 @@ export default function Drivers() {
       alert('ড্রাইভারের নাম প্রদান করুন।');
       return;
     }
+    if (!branchId) {
+      alert('এই ড্রাইভার কোন শাখার জন্য, সেটি নির্বাচন করুন।');
+      return;
+    }
 
     try {
       const { data, error } = await supabase
         .from('drivers')
         .insert([{ 
+          branch_id: branchId,
           name,
           father_name: fatherName,
           mother_name: motherName,
@@ -153,6 +162,11 @@ export default function Drivers() {
         </h3>
         
         <form onSubmit={addDriver} className="flex flex-col gap-3 md:gap-5">
+
+          {/* Row 0: কোন শাখার জন্য */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5">
+            <BranchField value={branchId} onChange={setBranchId} />
+          </div>
 
           {/* Row 1: Basic Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5">
@@ -347,6 +361,7 @@ export default function Drivers() {
                   <div className="flex flex-col gap-0.5 text-white/70 overflow-hidden">
                     <h4 className="m-0 text-base md:text-lg font-bold text-white truncate flex items-center gap-2">
                       {driver.name}
+                      <BranchTag branchId={driver.branch_id} />
                     </h4>
 
                     {driver.phone && (

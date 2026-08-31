@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useBranch } from '../contexts/BranchContext';
+import { BranchField, BranchTag } from '../components/BranchField';
 import { ArrowUpCircle, Trash2, Hash, PiggyBank, Wallet, AlertTriangle, MessageSquare, Plus, User } from 'lucide-react';
 import { today, formatDate, bn } from '../lib/date';
 
 export default function DepositEntry() {
   // Only an admin may delete; everyone else can add and edit
-  const { userRole } = useAuth();
-  const isAdmin = userRole === 'admin';
+  const { isAdmin } = useAuth();
+  const { activeBranchId, scopeQuery } = useBranch();
 
   const [incomes, setIncomes] = useState([]);
   const [rickshaws, setRickshaws] = useState([]);
@@ -18,6 +20,7 @@ export default function DepositEntry() {
   const [saving, setSaving] = useState(false);
 
   // Form state
+  const [branchId, setBranchId] = useState('');       // কোন শাখার জন্য এই জমা
   const [rickshawId, setRickshawId] = useState('');
   const [dailyJoma, setDailyJoma] = useState('');      // auto-filled from settings (read only)
   const [date, setDate] = useState(today());
@@ -34,51 +37,69 @@ export default function DepositEntry() {
     ? incomes.filter(income => income.rickshaw_id === filterRickshawId)
     : incomes;
 
+  // Only this branch's vehicles may receive this deposit
+  const branchRickshaws = branchId
+    ? rickshaws.filter(r => r.branch_id === branchId)
+    : rickshaws;
+
   const selectedRickshaw = rickshaws.find(r => r.id === rickshawId);
   // Whoever currently holds the selected vehicle — any বাকী is charged to them
   const selectedAssignment = assignments.find(a => a.rickshaw_id === rickshawId);
 
+  // Switching branch in the header reloads the screen's books
   useEffect(() => {
     fetchData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeBranchId]);
+
+  // A vehicle from the old branch must not stay selected after a switch
+  useEffect(() => {
+    if (rickshawId && !branchRickshaws.some(r => r.id === rickshawId)) {
+      setRickshawId('');
+      setDailyJoma('');
+      setCashAmount('');
+      setDueAmount('');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [branchId, rickshaws]);
 
   async function fetchData() {
     try {
       setLoading(true);
 
-      const { data: rData, error: rError } = await supabase
+      const { data: rData, error: rError } = await scopeQuery(supabase
         .from('rickshaws')
-        .select('id, identity_no, registration_number, vehicle_type')
+        .select('id, identity_no, registration_number, vehicle_type, branch_id'))
         .order('identity_no', { ascending: true });
       if (rError) throw rError;
       setRickshaws(rData || []);
 
       // Active daily deposit rates (set from the "Set Daily Deposit" page)
-      const { data: depData, error: depError } = await supabase
+      const { data: depData, error: depError } = await scopeQuery(supabase
         .from('daily_deposit_settings')
-        .select('rickshaw_id, daily_joma_amount')
+        .select('rickshaw_id, daily_joma_amount'))
         .eq('status', 'active');
       if (depError) throw depError;
       setDepositRates(depData || []);
 
       // Active driver assignments, so a deposit can be attributed to a driver
-      const { data: aData, error: aError } = await supabase
+      const { data: aData, error: aError } = await scopeQuery(supabase
         .from('driver_vehicle_assignments')
-        .select('rickshaw_id, driver_id, drivers(name, phone)')
+        .select('rickshaw_id, driver_id, drivers(name, phone)'))
         .eq('status', 'active');
       if (aError) throw aError;
       setAssignments(aData || []);
 
       // Already-recovered বাকী, so the header shows the outstanding balance
-      const { data: recData, error: recError } = await supabase
+      const { data: recData, error: recError } = await scopeQuery(supabase
         .from('due_recoveries')
-        .select('amount');
+        .select('amount'));
       if (recError) throw recError;
       setTotalRecovered((recData || []).reduce((s, r) => s + Number(r.amount || 0), 0));
 
-      const { data: iData, error: iError } = await supabase
+      const { data: iData, error: iError } = await scopeQuery(supabase
         .from('daily_incomes')
-        .select(`*, rickshaws(registration_number, identity_no, vehicle_type), drivers(name)`)
+        .select(`*, rickshaws(registration_number, identity_no, vehicle_type), drivers(name)`))
         .order('date', { ascending: false })
         .order('created_at', { ascending: false });
       if (iError) throw iError;
@@ -132,6 +153,7 @@ export default function DepositEntry() {
   }
 
   function resetForm() {
+    // branchId is deliberately kept: the next entry is for the same শাখা
     setRickshawId('');
     setDailyJoma('');
     setDate(today());
@@ -145,6 +167,10 @@ export default function DepositEntry() {
   async function handleSubmit(e) {
     e.preventDefault();
 
+    if (!branchId) {
+      alert('এই জমাটি কোন শাখার জন্য, সেটি নির্বাচন করুন।');
+      return;
+    }
     if (!rickshawId) {
       alert('অনুগ্রহ করে একটি রিক্সা/অটো নির্বাচন করুন।');
       return;
@@ -170,6 +196,7 @@ export default function DepositEntry() {
       const { data, error } = await supabase
         .from('daily_incomes')
         .insert([{
+          branch_id: branchId,
           rickshaw_id: rickshawId,
           driver_id: selectedAssignment?.driver_id || null,
           date,
@@ -245,7 +272,10 @@ export default function DepositEntry() {
 
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5 items-start">
 
-          {/* 1. Rickshaw dropdown */}
+          {/* 0. Which শাখা is this deposit for */}
+          <BranchField value={branchId} onChange={setBranchId} />
+
+          {/* 1. Rickshaw dropdown — only the chosen branch's vehicles */}
           <div className="form-group !mb-0">
             <label className="form-label">রিক্সা নাম্বার (Vehicle)</label>
             <select
@@ -255,12 +285,15 @@ export default function DepositEntry() {
               required
             >
               <option value="">-- রিক্সা/অটো নির্বাচন করুন --</option>
-              {rickshaws.map(r => (
+              {branchRickshaws.map(r => (
                 <option key={r.id} value={r.id}>
                   ID: {r.identity_no || 'N/A'} ({r.vehicle_type || 'Vehicle'}) - {r.registration_number}
                 </option>
               ))}
             </select>
+            {branchId && branchRickshaws.length === 0 && (
+              <p className="text-amber-400/80 text-xs mt-1.5">এই শাখায় এখনো কোনো গাড়ি যুক্ত করা হয়নি।</p>
+            )}
           </div>
 
           {/* 2. Daily joma (auto but editable) */}
@@ -447,6 +480,7 @@ export default function DepositEntry() {
                       <span className="inline-flex items-center gap-1.5 flex-wrap">
                         <span className="id-badge">{income.rickshaws.identity_no || 'N/A'}</span>
                         <span className="text-white/85 text-sm font-semibold">{income.rickshaws.registration_number}</span>
+                        <BranchTag branchId={income.branch_id} />
                       </span>
                     ) : (
                       <span className="text-white/40 text-sm">গাড়ি নেই</span>
@@ -525,6 +559,7 @@ export default function DepositEntry() {
                         <span className="inline-flex items-center gap-1.5">
                           <span className="id-badge">{income.rickshaws.identity_no || 'N/A'}</span>
                           <span className="text-white/80">{income.rickshaws.registration_number}</span>
+                          <BranchTag branchId={income.branch_id} />
                         </span>
                       ) : (
                         <span className="text-white/40">N/A</span>

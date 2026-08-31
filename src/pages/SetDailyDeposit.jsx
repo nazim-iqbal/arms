@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useBranch } from '../contexts/BranchContext';
+import { BranchField, BranchTag } from '../components/BranchField';
 import { PiggyBank, Plus, Trash2, Edit2, CheckCircle2, XCircle, CarFront, Hash, DollarSign, LogOut } from 'lucide-react';
 import { today, formatDate, bn } from '../lib/date';
 
 export default function SetDailyDeposit() {
   // Only an admin may delete; everyone else can add and edit
-  const { userRole } = useAuth();
-  const isAdmin = userRole === 'admin';
+  const { isAdmin } = useAuth();
+  const { activeBranchId, scopeQuery } = useBranch();
+  const [branchId, setBranchId] = useState('');       // কোন শাখার গাড়ি
 
   const [rickshaws, setRickshaws] = useState([]);
   const [depositSettings, setDepositSettings] = useState([]);
@@ -27,29 +30,42 @@ export default function SetDailyDeposit() {
   const [editAmount, setEditAmount] = useState('');
   const [editDate, setEditDate] = useState('');
 
+  // Only the chosen branch's vehicles can get a rate here
+  const branchRickshaws = branchId
+    ? rickshaws.filter(r => r.branch_id === branchId)
+    : rickshaws;
+
   useEffect(() => {
     fetchData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeBranchId]);
+
+  useEffect(() => {
+    if (selectedRickshawId && !branchRickshaws.some(r => r.id === selectedRickshawId)) {
+      handleRickshawChange('');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [branchId, rickshaws]);
 
   async function fetchData() {
     try {
       setLoading(true);
       
       // Fetch vehicles for dropdown (order by identity_no)
-      const { data: rData, error: rError } = await supabase
+      const { data: rData, error: rError } = await scopeQuery(supabase
         .from('rickshaws')
-        .select('id, identity_no, registration_number, vehicle_type')
+        .select('id, identity_no, registration_number, vehicle_type, branch_id'))
         .order('identity_no', { ascending: true });
       if (rError) throw rError;
       setRickshaws(rData || []);
 
       // Fetch existing daily deposit settings with vehicle details
-      const { data: dData, error: dError } = await supabase
+      const { data: dData, error: dError } = await scopeQuery(supabase
         .from('daily_deposit_settings')
         .select(`
           *,
           rickshaws (identity_no, registration_number, vehicle_type)
-        `)
+        `))
         .order('created_at', { ascending: false });
       if (dError) throw dError;
       setDepositSettings(dData || []);
@@ -79,6 +95,10 @@ export default function SetDailyDeposit() {
     e.preventDefault();
     if (submitting) return;
 
+    if (!branchId) {
+      alert('এটি কোন শাখার জন্য, সেটি নির্বাচন করুন।');
+      return;
+    }
     if (!selectedRickshawId) {
       alert('অনুগ্রহ করে একটি পরিচিতি নম্বর (যানবাহন) নির্বাচন করুন।');
       return;
@@ -101,6 +121,7 @@ export default function SetDailyDeposit() {
       const { error } = await supabase
         .from('daily_deposit_settings')
         .insert([{
+          branch_id: branchId,
           rickshaw_id: selectedRickshawId,
           daily_joma_amount: parseFloat(dailyJomaAmount),
           entry_date: entryDate,
@@ -211,7 +232,10 @@ export default function SetDailyDeposit() {
         </h3>
 
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5 items-start">
-          
+
+          {/* 0. কোন শাখার জন্য */}
+          <BranchField value={branchId} onChange={setBranchId} />
+
           {/* 1. Identity No Dropdown */}
           <div className="form-group">
             <label className="form-label flex justify-between items-center">
@@ -224,7 +248,7 @@ export default function SetDailyDeposit() {
               required
             >
               <option value="">-- পরিচিতি নম্বর নির্বাচন করুন --</option>
-              {rickshaws
+              {branchRickshaws
                 .filter(r => !depositSettings.some(d => d.status === 'active' && d.rickshaw_id === r.id))
                 .map(r => (
                 <option key={r.id} value={r.id}>
@@ -327,6 +351,7 @@ export default function SetDailyDeposit() {
                     <span className="inline-flex items-center gap-1.5 flex-wrap">
                       <span className="id-badge"><Hash size={11} />{item.rickshaws?.identity_no || 'N/A'}</span>
                       <span className="text-white/85 text-sm font-semibold">{item.rickshaws?.registration_number || 'N/A'}</span>
+                      <BranchTag branchId={item.branch_id} />
                     </span>
                     <span className="text-white/45 text-xs mt-1 block">
                       এন্ট্রি: {formatDate(item.entry_date)}

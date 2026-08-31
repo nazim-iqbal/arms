@@ -2,10 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { today, daysAgo, formatDate, bn } from '../lib/date';
 import { buildDueBalances, listDebtors, orphanDue } from '../lib/due';
+import { useBranch } from '../contexts/BranchContext';
 import {
   CarFront, Users, DollarSign, TrendingUp, TrendingDown, Activity,
   X, ChevronRight, RefreshCw, Loader2, AlertTriangle, Wallet, Hash, Phone, Menu, User, HandCoins,
-  Search, CalendarRange
+  Search, CalendarRange, Building2
 } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
@@ -174,6 +175,9 @@ const REPORTS = {
 };
 
 export default function Dashboard() {
+  // Every figure on this screen belongs to the শাখা chosen in the header
+  const { activeBranchId, scopeQuery, activeBranch, isAllBranches } = useBranch();
+
   const [stats, setStats] = useState({
     totalRickshaws: 0,
     activeRickshaws: 0,
@@ -207,7 +211,7 @@ export default function Dashboard() {
   useEffect(() => {
     fetchDashboardData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rangeKey, customRange]);
+  }, [rangeKey, customRange, activeBranchId]);
 
   function applyCustomRange() {
     const { from, to } = customDraft;
@@ -229,14 +233,14 @@ export default function Dashboard() {
       const { from, to } = range;
 
       const [rRes, dRes, iRes, eRes, recRes, allDueRes, allRecRes] = await Promise.all([
-        supabase.from('rickshaws').select('status'),
-        supabase.from('drivers').select('*', { count: 'exact', head: true }),
-        supabase.from('daily_incomes').select('amount, due_amount').gte('date', from).lte('date', to),
-        supabase.from('daily_expenses').select('amount').gte('date', from).lte('date', to),
-        supabase.from('due_recoveries').select('amount').gte('recovery_date', from).lte('recovery_date', to),
+        scopeQuery(supabase.from('rickshaws').select('status')),
+        scopeQuery(supabase.from('drivers').select('*', { count: 'exact', head: true })),
+        scopeQuery(supabase.from('daily_incomes').select('amount, due_amount')).gte('date', from).lte('date', to),
+        scopeQuery(supabase.from('daily_expenses').select('amount')).gte('date', from).lte('date', to),
+        scopeQuery(supabase.from('due_recoveries').select('amount')).gte('recovery_date', from).lte('recovery_date', to),
         // Whole history — the outstanding বাকী is a running balance, not a period figure
-        supabase.from('daily_incomes').select('driver_id, due_amount').gt('due_amount', 0),
-        supabase.from('due_recoveries').select('driver_id, amount'),
+        scopeQuery(supabase.from('daily_incomes').select('driver_id, due_amount')).gt('due_amount', 0),
+        scopeQuery(supabase.from('due_recoveries').select('driver_id, amount')),
       ]);
 
       if (rRes.error) throw rRes.error;
@@ -284,15 +288,15 @@ export default function Dashboard() {
 
     if (key === 'income') {
       const [iRes, recRes] = await Promise.all([
-        supabase
+        scopeQuery(supabase
           .from('daily_incomes')
-          .select('*, rickshaws(identity_no, registration_number, vehicle_type), drivers(name)')
+          .select('*, rickshaws(identity_no, registration_number, vehicle_type), drivers(name)'))
           .gte('date', from).lte('date', to)
           .order('date', { ascending: false })
           .order('created_at', { ascending: false }),
-        supabase
+        scopeQuery(supabase
           .from('due_recoveries')
-          .select('*, rickshaws(identity_no, registration_number), drivers(name)')
+          .select('*, rickshaws(identity_no, registration_number), drivers(name)'))
           .gte('recovery_date', from).lte('recovery_date', to)
           .order('recovery_date', { ascending: false })
           .order('created_at', { ascending: false }),
@@ -303,9 +307,9 @@ export default function Dashboard() {
     }
 
     if (key === 'expense') {
-      const { data, error } = await supabase
+      const { data, error } = await scopeQuery(supabase
         .from('daily_expenses')
-        .select('*, rickshaws(identity_no, registration_number, vehicle_type)')
+        .select('*, rickshaws(identity_no, registration_number, vehicle_type)'))
         .gte('date', from).lte('date', to)
         .order('date', { ascending: false })
         .order('created_at', { ascending: false });
@@ -315,17 +319,17 @@ export default function Dashboard() {
 
     if (key === 'profit') {
       const [iRes, eRes, recRes] = await Promise.all([
-        supabase
+        scopeQuery(supabase
           .from('daily_incomes')
-          .select('rickshaw_id, amount, due_amount, rickshaws(identity_no, registration_number)')
+          .select('rickshaw_id, amount, due_amount, rickshaws(identity_no, registration_number)'))
           .gte('date', from).lte('date', to),
-        supabase
+        scopeQuery(supabase
           .from('daily_expenses')
-          .select('rickshaw_id, amount, rickshaws(identity_no, registration_number)')
+          .select('rickshaw_id, amount, rickshaws(identity_no, registration_number)'))
           .gte('date', from).lte('date', to),
-        supabase
+        scopeQuery(supabase
           .from('due_recoveries')
-          .select('rickshaw_id, amount, rickshaws(identity_no, registration_number)')
+          .select('rickshaw_id, amount, rickshaws(identity_no, registration_number)'))
           .gte('recovery_date', from).lte('recovery_date', to),
       ]);
       if (iRes.error) throw iRes.error;
@@ -341,12 +345,12 @@ export default function Dashboard() {
 
     if (key === 'due') {
       const [dueRes, recRes, drvRes] = await Promise.all([
-        supabase
+        scopeQuery(supabase
           .from('daily_incomes')
-          .select('driver_id, rickshaw_id, due_amount, date, rickshaws(identity_no, registration_number)')
+          .select('driver_id, rickshaw_id, due_amount, date, rickshaws(identity_no, registration_number)'))
           .gt('due_amount', 0),
-        supabase.from('due_recoveries').select('driver_id, amount, recovery_date'),
-        supabase.from('drivers').select('id, name, phone'),
+        scopeQuery(supabase.from('due_recoveries').select('driver_id, amount, recovery_date')),
+        scopeQuery(supabase.from('drivers').select('id, name, phone, branch_id')),
       ]);
       if (dueRes.error) throw dueRes.error;
       if (recRes.error) throw recRes.error;
@@ -369,9 +373,9 @@ export default function Dashboard() {
     }
 
     if (key === 'vehicles') {
-      const { data, error } = await supabase
+      const { data, error } = await scopeQuery(supabase
         .from('rickshaws')
-        .select('*')
+        .select('*'))
         .order('identity_no', { ascending: true });
       if (error) throw error;
       return { rows: data || [] };
@@ -379,10 +383,11 @@ export default function Dashboard() {
 
     if (key === 'drivers') {
       const [dRes, aRes] = await Promise.all([
-        supabase.from('drivers').select('id, name, phone, nid_no').order('name', { ascending: true }),
-        supabase
+        scopeQuery(supabase.from('drivers').select('id, name, phone, nid_no, branch_id'))
+          .order('name', { ascending: true }),
+        scopeQuery(supabase
           .from('driver_vehicle_assignments')
-          .select('driver_id, assign_date, rickshaws(identity_no, registration_number)')
+          .select('driver_id, assign_date, rickshaws(identity_no, registration_number)'))
           .eq('status', 'active'),
       ]);
       if (dRes.error) throw dRes.error;
@@ -864,7 +869,15 @@ export default function Dashboard() {
         </div>
       )}
 
-      <p className="text-white/45 text-xs md:text-sm mt-2 mb-3 md:mb-4">
+      {/* Which শাখা these figures belong to */}
+      <div className="flex items-center gap-2 mt-3">
+        <Building2 size={15} className="text-violet-400 shrink-0" />
+        <span className="text-sm md:text-base font-bold text-violet-200">
+          {isAllBranches ? 'সকল শাখার সম্মিলিত হিসাব' : activeBranch ? `${activeBranch.name} শাখা` : 'শাখা নির্ধারিত নয়'}
+        </span>
+      </div>
+
+      <p className="text-white/45 text-xs md:text-sm mt-1 mb-3 md:mb-4">
         {range.all
           ? 'শুরু থেকে আজ পর্যন্ত সকল লেনদেন'
           : range.from === range.to

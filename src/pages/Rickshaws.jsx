@@ -1,16 +1,19 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useBranch } from '../contexts/BranchContext';
+import { BranchField, BranchTag } from '../components/BranchField';
 import { CarFront, Plus, Trash2, Hash } from 'lucide-react';
 import { bn } from '../lib/date';
 
 export default function Rickshaws() {
   // Only an admin may delete; everyone else can add and edit
-  const { userRole } = useAuth();
-  const isAdmin = userRole === 'admin';
+  const { isAdmin } = useAuth();
+  const { activeBranchId, scopeQuery, branchLabel } = useBranch();
 
   const [rickshaws, setRickshaws] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [branchId, setBranchId] = useState('');       // কোন শাখার গাড়ি
   const [identityNo, setIdentityNo] = useState('');
   const [newRegNo, setNewRegNo] = useState('');
   const [status, setStatus] = useState('active');
@@ -20,16 +23,29 @@ export default function Rickshaws() {
   const [showPreview, setShowPreview] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
+  // Identity numbers run 101+/201+ inside EACH branch, so every suggestion
+  // and duplicate check looks at that branch's vehicles only.
+  const branchRickshaws = branchId
+    ? rickshaws.filter(r => r.branch_id === branchId)
+    : rickshaws;
+
   useEffect(() => {
     fetchRickshaws();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeBranchId]);
+
+  // Changing the branch re-suggests the number from that branch's series
+  useEffect(() => {
+    setIdentityNo(suggestNextIdentityNo(vehicleType, branchRickshaws));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [branchId, rickshaws]);
 
   async function fetchRickshaws() {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      const { data, error } = await scopeQuery(supabase
         .from('rickshaws')
-        .select('*')
+        .select('*'))
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -37,7 +53,10 @@ export default function Rickshaws() {
       setRickshaws(loaded);
       
       // Suggest initial identity_no based on default vehicleType ('Rickshaw')
-      setIdentityNo(suggestNextIdentityNo('Rickshaw', loaded));
+      setIdentityNo(suggestNextIdentityNo(
+        'Rickshaw',
+        branchId ? loaded.filter(r => r.branch_id === branchId) : loaded
+      ));
     } catch (error) {
       alert('Error fetching vehicles: ' + error.message);
     } finally {
@@ -71,7 +90,7 @@ export default function Rickshaws() {
 
   function handleTypeChange(newType) {
     setVehicleType(newType);
-    setIdentityNo(suggestNextIdentityNo(newType, rickshaws));
+    setIdentityNo(suggestNextIdentityNo(newType, branchRickshaws));
     setErrorMsg('');
   }
 
@@ -85,7 +104,8 @@ export default function Rickshaws() {
     if (type === 'Auto' && !idNum.startsWith('2')) {
       return 'অটোর পরিচিতি নাম্বার ২০১ দিয়ে শুরু হওয়া আবশ্যক (২০১-২৯৯ range)।';
     }
-    const exists = rickshaws.some(r => r.identity_no === idNum);
+    // Two branches may each have a 101 — only a clash inside one matters
+    const exists = branchRickshaws.some(r => r.identity_no === idNum);
     if (exists) {
       return `পরিচিতি নাম্বার ${idNum} ইতোমধ্যে একজন গাড়িতে ব্যবহৃত হয়েছে। অনুগ্রহ করে ইউনিক পরিচিতি নাম্বার দিন।`;
     }
@@ -96,6 +116,10 @@ export default function Rickshaws() {
     e.preventDefault();
     setErrorMsg('');
 
+    if (!branchId) {
+      setErrorMsg('এই গাড়িটি কোন শাখার জন্য, সেটি নির্বাচন করুন।');
+      return;
+    }
     if (!newRegNo.trim()) {
       setErrorMsg('রেজিস্ট্রেশন নাম্বার প্রদান করুন।');
       return;
@@ -116,6 +140,7 @@ export default function Rickshaws() {
       const { data, error } = await supabase
         .from('rickshaws')
         .insert([{ 
+          branch_id: branchId,
           identity_no: identityNo,
           registration_number: newRegNo, 
           status,
@@ -136,7 +161,10 @@ export default function Rickshaws() {
       setShowPreview(false);
       
       // Auto-suggest next Identity No for current vehicle type
-      setIdentityNo(suggestNextIdentityNo(vehicleType, updatedList));
+      setIdentityNo(suggestNextIdentityNo(
+        vehicleType,
+        branchId ? updatedList.filter(r => r.branch_id === branchId) : updatedList
+      ));
     } catch (error) {
       alert('Error adding vehicle: ' + error.message);
     }
@@ -155,7 +183,10 @@ export default function Rickshaws() {
       if (error) throw error;
       const updatedList = rickshaws.filter(r => r.id !== id);
       setRickshaws(updatedList);
-      setIdentityNo(suggestNextIdentityNo(vehicleType, updatedList));
+      setIdentityNo(suggestNextIdentityNo(
+        vehicleType,
+        branchId ? updatedList.filter(r => r.branch_id === branchId) : updatedList
+      ));
     } catch (error) {
       alert('Error deleting vehicle: ' + error.message);
     }
@@ -190,7 +221,10 @@ export default function Rickshaws() {
         )}
 
         <form onSubmit={handlePreview} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5 items-start">
-          
+
+          {/* এটি কোন শাখার জন্য সাবমিট করা হচ্ছে */}
+          <BranchField value={branchId} onChange={setBranchId} />
+
           <div className="form-group">
             <label className="form-label">গাড়ির ধরন (Vehicle Type)</label>
             <select className="form-input" value={vehicleType} onChange={(e) => handleTypeChange(e.target.value)}>
@@ -313,6 +347,7 @@ export default function Rickshaws() {
                       <span className="text-[10px] md:text-xs px-2 py-0.5 rounded bg-white/10 text-white/70 font-normal shrink-0">
                         {rickshaw.vehicle_type || 'N/A'}
                       </span>
+                      <BranchTag branchId={rickshaw.branch_id} />
                     </h4>
                     <div className="text-xs md:text-sm text-white/70 mt-1">
                       ক্রয় মূল্য: ৳{bn(rickshaw.purchase_price)} |অবস্থা: {rickshaw.condition === 'New' ? 'নতুন' : 'পুরাতন'}
@@ -350,6 +385,10 @@ export default function Rickshaws() {
               গাড়ির তথ্য প্রিভিউ (Preview)
             </h3>
             <div className="flex flex-col gap-2.5 mb-5 text-sm text-white/80">
+              <p className="flex justify-between border-b border-white/5 pb-2">
+                <span className="text-white/60">শাখা (Branch):</span>
+                <span className="font-bold text-violet-300">{branchLabel(branchId)}</span>
+              </p>
               <p className="flex justify-between border-b border-white/5 pb-2">
                 <span className="text-white/60">পরিচিতি নম্বর (ID):</span> 
                 <span className="font-mono font-bold text-[#00f2fe] text-lg">{identityNo}</span>

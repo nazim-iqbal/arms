@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, NavLink, Navigate, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Users, Wrench, Menu, X, LogOut, Shield, PiggyBank, UserCheck, ArrowUpCircle, ArrowDownCircle, HandCoins, KeyRound } from 'lucide-react';
+import { LayoutDashboard, Users, Wrench, Menu, X, LogOut, Shield, PiggyBank, UserCheck, ArrowUpCircle, ArrowDownCircle, HandCoins, KeyRound, Building2 } from 'lucide-react';
 import './index.css';
 
 import Rickshaws from './pages/Rickshaws';
@@ -15,7 +15,9 @@ import UsersPage from './pages/Users';
 import ChangePassword from './pages/ChangePassword';
 import SetDailyDeposit from './pages/SetDailyDeposit';
 import AssignDriverVehicle from './pages/AssignDriverVehicle';
+import Branches from './pages/Branches';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { BranchProvider, useBranch, ALL_BRANCHES } from './contexts/BranchContext';
 
 /* Side view of a three-wheeler auto rickshaw (CNG / tuk-tuk) */
 const AutoRickshawIcon = ({ size = 24, className = "" }) => (
@@ -68,7 +70,11 @@ const NavItem = ({ to, icon: Icon, label, onNavigate }) => (
 );
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
-  const { userRole } = useAuth();
+  // A plain 'user' only ever enters money — the four entry screens and
+  // nothing else. ProtectedLayout blocks the other routes as well, so
+  // typing the URL by hand does not get around this.
+  const { userRole, isAdmin, isSuperAdmin } = useAuth();
+  const isEntryOnly = userRole === 'user';
   const closeSidebar = () => setIsOpen(false);
 
   return (
@@ -95,24 +101,72 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         </div>
 
         <nav className="flex flex-col gap-1 flex-1">
-          <NavItem to="/" icon={LayoutDashboard} label="Dashboard" onNavigate={closeSidebar} />
-          <NavItem to="/rickshaws" icon={AutoRickshawIcon} label="New Vehicle Entry" onNavigate={closeSidebar} />
-          <NavItem to="/daily-deposits" icon={PiggyBank} label="Set Daily Deposit" onNavigate={closeSidebar} />
-          <NavItem to="/drivers" icon={Users} label="Drivers" onNavigate={closeSidebar} />
-          <NavItem to="/assign-driver-vehicle" icon={UserCheck} label="Assign Driver" onNavigate={closeSidebar} />
+          {!isEntryOnly && (
+            <>
+              <NavItem to="/" icon={LayoutDashboard} label="Dashboard" onNavigate={closeSidebar} />
+              <NavItem to="/rickshaws" icon={AutoRickshawIcon} label="New Vehicle Entry" onNavigate={closeSidebar} />
+              <NavItem to="/daily-deposits" icon={PiggyBank} label="Set Daily Deposit" onNavigate={closeSidebar} />
+              <NavItem to="/drivers" icon={Users} label="Drivers" onNavigate={closeSidebar} />
+              <NavItem to="/assign-driver-vehicle" icon={UserCheck} label="Assign Driver" onNavigate={closeSidebar} />
+            </>
+          )}
+
           <NavItem to="/deposits" icon={ArrowUpCircle} label="Deposit Entry" onNavigate={closeSidebar} />
           <NavItem to="/due-recovery" icon={HandCoins} label="Due Recovery" onNavigate={closeSidebar} />
           <NavItem to="/expenses" icon={ArrowDownCircle} label="Expense Entry" onNavigate={closeSidebar} />
           <NavItem to="/parts" icon={Wrench} label="Parts" onNavigate={closeSidebar} />
 
-          {userRole === 'admin' && (
+          {isAdmin && (
             <div className="mt-3 pt-3 border-t border-white/10">
+              {isSuperAdmin && (
+                <NavItem to="/branches" icon={Building2} label="Branch Management" onNavigate={closeSidebar} />
+              )}
               <NavItem to="/users" icon={Shield} label="User Management" onNavigate={closeSidebar} />
             </div>
           )}
         </nav>
       </aside>
     </>
+  );
+};
+
+/**
+ * Which শাখা the whole app is looking at.
+ * The super admin picks; everyone else just sees their own branch's name,
+ * because that is the only branch RLS will hand them rows from.
+ */
+const BranchSwitcher = () => {
+  const { activeBranches, activeBranchId, setActiveBranchId, canSwitchBranch, activeBranch } = useBranch();
+
+  if (!canSwitchBranch) {
+    return (
+      <span className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs md:text-sm font-semibold text-white/80 max-w-[45vw] md:max-w-none">
+        <Building2 size={15} className="text-violet-400 shrink-0" />
+        <span className="truncate">{activeBranch ? activeBranch.name : 'শাখা নির্ধারিত নয়'}</span>
+      </span>
+    );
+  }
+
+  return (
+    <div className="relative">
+      <select
+        value={activeBranchId}
+        onChange={(e) => setActiveBranchId(e.target.value)}
+        title="শাখা নির্বাচন"
+        className="appearance-none cursor-pointer pl-8 pr-7 py-1.5 rounded-lg bg-violet-500/10 border border-violet-500/30
+                   text-xs md:text-sm font-semibold text-violet-200 max-w-[45vw] md:max-w-none
+                   focus:outline-none focus:border-violet-400"
+      >
+        <option value={ALL_BRANCHES} className="bg-[#1a1a24] text-white">সকল শাখা</option>
+        {activeBranches.map((b) => (
+          <option key={b.id} value={b.id} className="bg-[#1a1a24] text-white">
+            {b.name} ({b.code})
+          </option>
+        ))}
+      </select>
+      <Building2 size={15} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-violet-400 pointer-events-none" />
+      <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-violet-300/60 text-[10px] pointer-events-none">▼</span>
+    </div>
   );
 };
 
@@ -140,10 +194,15 @@ const Header = ({ setIsSidebarOpen }) => {
         </h2>
       </div>
 
-      <div className="hidden lg:block flex-1"></div>
+      <div className="hidden lg:flex flex-1 items-center">
+        <BranchSwitcher />
+      </div>
 
       <div className="flex items-center justify-end gap-2.5 md:gap-5 shrink-0">
-        <div className="font-bold text-xs md:text-lg text-[#00f2fe] tabular-nums">
+        <div className="lg:hidden">
+          <BranchSwitcher />
+        </div>
+        <div className="hidden sm:block font-bold text-xs md:text-lg text-[#00f2fe] tabular-nums">
           {time.toLocaleTimeString()}
         </div>
         <Link
@@ -166,6 +225,22 @@ const Header = ({ setIsSidebarOpen }) => {
     </div>
   );
 };
+
+/**
+ * A route only some roles may open. Typing the URL by hand lands on the
+ * first screen the account is actually allowed to see.
+ */
+const RequireRole = ({ allow, children }) => {
+  const { userRole } = useAuth();
+  if (!allow(userRole)) {
+    return <Navigate to={userRole === 'user' ? '/deposits' : '/'} replace />;
+  }
+  return children;
+};
+
+const notEntryOnly = (role) => role !== 'user';
+const superAdminOnly = (role) => role === 'super_admin';
+const adminOnly = (role) => role === 'admin' || role === 'super_admin';
 
 const ProtectedLayout = () => {
   const { user } = useAuth();
@@ -192,28 +267,35 @@ const ProtectedLayout = () => {
 function App() {
   return (
     <AuthProvider>
+      <BranchProvider>
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
 
           {/* Protected Routes */}
           <Route element={<ProtectedLayout />}>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/rickshaws" element={<Rickshaws />} />
-            <Route path="/daily-deposits" element={<SetDailyDeposit />} />
-            <Route path="/drivers" element={<Drivers />} />
-            <Route path="/assign-driver-vehicle" element={<AssignDriverVehicle />} />
+            <Route path="/" element={<RequireRole allow={notEntryOnly}><Dashboard /></RequireRole>} />
+            <Route path="/rickshaws" element={<RequireRole allow={notEntryOnly}><Rickshaws /></RequireRole>} />
+            <Route path="/daily-deposits" element={<RequireRole allow={notEntryOnly}><SetDailyDeposit /></RequireRole>} />
+            <Route path="/drivers" element={<RequireRole allow={notEntryOnly}><Drivers /></RequireRole>} />
+            <Route path="/assign-driver-vehicle" element={<RequireRole allow={notEntryOnly}><AssignDriverVehicle /></RequireRole>} />
+
+            {/* The four entry screens — every role reaches these */}
             <Route path="/deposits" element={<DepositEntry />} />
             <Route path="/due-recovery" element={<DueRecovery />} />
             <Route path="/expenses" element={<ExpenseEntry />} />
+            <Route path="/parts" element={<Parts />} />
+
             {/* Old Finances page has been split into the two entry screens above */}
             <Route path="/finances" element={<Navigate to="/deposits" replace />} />
-            <Route path="/parts" element={<Parts />} />
-            <Route path="/users" element={<UsersPage />} />
+
+            <Route path="/branches" element={<RequireRole allow={superAdminOnly}><Branches /></RequireRole>} />
+            <Route path="/users" element={<RequireRole allow={adminOnly}><UsersPage /></RequireRole>} />
             <Route path="/change-password" element={<ChangePassword />} />
           </Route>
         </Routes>
       </Router>
+      </BranchProvider>
     </AuthProvider>
   );
 }

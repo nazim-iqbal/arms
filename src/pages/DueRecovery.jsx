@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useBranch } from '../contexts/BranchContext';
+import { BranchField, BranchTag } from '../components/BranchField';
 import { today, formatDate, bn } from '../lib/date';
 import { buildDueBalances, listDebtors, orphanDue as sumOrphanDue } from '../lib/due';
 import {
@@ -10,8 +12,8 @@ import {
 
 export default function DueRecovery() {
   // Only an admin may delete; everyone else can add and edit
-  const { userRole } = useAuth();
-  const isAdmin = userRole === 'admin';
+  const { isAdmin } = useAuth();
+  const { activeBranchId, scopeQuery } = useBranch();
 
   const [drivers, setDrivers] = useState([]);
   const [dueRows, setDueRows] = useState([]);        // deposits that left a বাকী
@@ -21,34 +23,38 @@ export default function DueRecovery() {
   const [saving, setSaving] = useState(false);
 
   // Form state
+  const [branchId, setBranchId] = useState('');      // কোন শাখার আদায়
   const [driverId, setDriverId] = useState('');
   const [date, setDate] = useState(today());
   const [amount, setAmount] = useState('');
   const [remarks, setRemarks] = useState('');
 
+  // Switching branch in the header reloads this screen's books
   useEffect(() => {
     fetchData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeBranchId]);
 
   async function fetchData() {
     try {
       setLoading(true);
 
       const [dRes, iRes, rRes, aRes] = await Promise.all([
-        supabase.from('drivers').select('id, name, phone').order('name', { ascending: true }),
-        supabase
+        scopeQuery(supabase.from('drivers').select('id, name, phone, branch_id'))
+          .order('name', { ascending: true }),
+        scopeQuery(supabase
           .from('daily_incomes')
-          .select('driver_id, rickshaw_id, due_amount, date, rickshaws(identity_no, registration_number)')
+          .select('driver_id, rickshaw_id, due_amount, date, rickshaws(identity_no, registration_number)'))
           .gt('due_amount', 0)
           .order('date', { ascending: false }),
-        supabase
+        scopeQuery(supabase
           .from('due_recoveries')
-          .select('*, drivers(name, phone), rickshaws(identity_no, registration_number)')
+          .select('*, drivers(name, phone), rickshaws(identity_no, registration_number)'))
           .order('recovery_date', { ascending: false })
           .order('created_at', { ascending: false }),
-        supabase
+        scopeQuery(supabase
           .from('driver_vehicle_assignments')
-          .select('driver_id, rickshaw_id, rickshaws(identity_no, registration_number)')
+          .select('driver_id, rickshaw_id, rickshaws(identity_no, registration_number)'))
           .eq('status', 'active'),
       ]);
 
@@ -85,7 +91,17 @@ export default function DueRecovery() {
     return null;
   }, [driverId, assignments, balances]);
 
+  useEffect(() => {
+    if (driverId && !branchDrivers.some((d) => d.id === driverId)) setDriverId('');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [branchId, drivers]);
+
   const outstanding = driverId ? (balances[driverId]?.outstanding || 0) : 0;
+
+  const branchDrivers = useMemo(
+    () => (branchId ? drivers.filter((d) => d.branch_id === branchId) : drivers),
+    [drivers, branchId]
+  );
 
   const debtors = useMemo(() => listDebtors(balances, drivers), [balances, drivers]);
 
@@ -96,6 +112,7 @@ export default function DueRecovery() {
     .reduce((s, r) => s + Number(r.amount || 0), 0);
 
   function resetForm() {
+    // branchId is deliberately kept: the next entry is for the same শাখা
     setDriverId('');
     setDate(today());
     setAmount('');
@@ -105,6 +122,10 @@ export default function DueRecovery() {
   async function handleSubmit(e) {
     e.preventDefault();
 
+    if (!branchId) {
+      alert('এই আদায়টি কোন শাখার জন্য, সেটি নির্বাচন করুন।');
+      return;
+    }
     if (!driverId) {
       alert('অনুগ্রহ করে একজন ড্রাইভার নির্বাচন করুন।');
       return;
@@ -124,6 +145,7 @@ export default function DueRecovery() {
     try {
       setSaving(true);
       const { error } = await supabase.from('due_recoveries').insert([{
+        branch_id: branchId,
         driver_id: driverId,
         rickshaw_id: selectedVehicle?.id || null,
         due_total: outstanding,
@@ -194,6 +216,9 @@ export default function DueRecovery() {
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5 items-start">
 
           {/* 1. Driver */}
+          {/* 0. কোন শাখার জন্য এই আদায় */}
+          <BranchField value={branchId} onChange={setBranchId} />
+
           <div className="form-group !mb-0">
             <label className="form-label">ড্রাইভারের নাম (Driver)</label>
             <select
@@ -203,7 +228,7 @@ export default function DueRecovery() {
               required
             >
               <option value="">-- ড্রাইভার নির্বাচন করুন --</option>
-              {drivers
+              {branchDrivers
                 .filter(d => (balances[d.id]?.outstanding || 0) > 0)
                 .map((d) => {
                 const bal = balances[d.id]?.outstanding || 0;
@@ -353,7 +378,10 @@ export default function DueRecovery() {
                   <span className="flex items-center gap-1.5 font-bold text-white text-sm truncate">
                     <User size={13} className="text-[#00f2fe] shrink-0" /> {b.driver.name}
                   </span>
-                  <span className="font-bold text-amber-400 shrink-0">৳ {bn(b.outstanding)}</span>
+                  <span className="flex items-center gap-1.5 shrink-0">
+                    <BranchTag branchId={b.driver.branch_id} />
+                    <span className="font-bold text-amber-400">৳ {bn(b.outstanding)}</span>
+                  </span>
                 </div>
                 <div className="flex items-center justify-between gap-2 text-xs text-white/50">
                   <span>মোট বাকী ৳ {bn(b.due)} · আদায় ৳ {bn(b.recovered)}</span>
@@ -398,7 +426,10 @@ export default function DueRecovery() {
                         <span className="text-white/40 text-xs">গাড়ি নেই</span>
                       )}
                     </span>
-                    <span className="text-white/45 text-xs font-mono">{formatDate(r.recovery_date)}</span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="text-white/45 text-xs font-mono">{formatDate(r.recovery_date)}</span>
+                      <BranchTag branchId={r.branch_id} />
+                    </span>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <span className="font-bold text-[#10B981] text-base">৳ {bn(r.amount)}</span>
@@ -446,7 +477,12 @@ export default function DueRecovery() {
               <tbody className="divide-y divide-white/5 text-sm text-white/80">
                 {recoveries.map((r) => (
                   <tr key={r.id} className="hover:bg-white/5 transition-colors duration-150">
-                    <td className="p-4 whitespace-nowrap text-white/70 font-mono">{formatDate(r.recovery_date)}</td>
+                    <td className="p-4 whitespace-nowrap text-white/70 font-mono">
+                      <span className="inline-flex items-center gap-1.5">
+                        {formatDate(r.recovery_date)}
+                        <BranchTag branchId={r.branch_id} />
+                      </span>
+                    </td>
                     <td className="p-4 font-semibold text-white whitespace-nowrap">
                       <span className="flex items-center gap-2">
                         <User size={14} className="text-[#00f2fe]" /> {r.drivers?.name || 'N/A'}

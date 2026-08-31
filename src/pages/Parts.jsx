@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useBranch } from '../contexts/BranchContext';
+import { BranchField, BranchTag } from '../components/BranchField';
 import { Wrench, ShoppingCart, Tag, Trash2, CarFront, MessageSquare } from 'lucide-react';
 import { today, formatDate, bn } from '../lib/date';
 
@@ -35,14 +37,15 @@ const MISC_PART = 'বিবিধ';
 
 export default function Parts() {
   // Only an admin may delete; everyone else can add and edit
-  const { userRole } = useAuth();
-  const isAdmin = userRole === 'admin';
+  const { isAdmin } = useAuth();
+  const { activeBranchId, scopeQuery } = useBranch();
 
   const [transactions, setTransactions] = useState([]);
   const [rickshaws, setRickshaws] = useState([]);
   const [loading, setLoading] = useState(true);
   
   // Form States
+  const [branchId, setBranchId] = useState('');       // কোন শাখার ক্রয়/বিক্রয়
   const [rickshawId, setRickshawId] = useState('');
   const [type, setType] = useState('purchase');
   const [partName, setPartName] = useState('');
@@ -50,20 +53,34 @@ export default function Parts() {
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(today());
 
+  // Switching branch in the header reloads this screen's records
   useEffect(() => {
     fetchData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeBranchId]);
+
+  // A vehicle from the old branch must not stay selected after a switch
+  useEffect(() => {
+    if (rickshawId && !branchRickshaws.some(r => r.id === rickshawId)) setRickshawId('');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [branchId, rickshaws]);
+
+  // Only the chosen branch's vehicles may be attached to the transaction
+  const branchRickshaws = branchId
+    ? rickshaws.filter(r => r.branch_id === branchId)
+    : rickshaws;
 
   async function fetchData() {
     try {
       setLoading(true);
-      const { data: rData, error: rError } = await supabase.from('rickshaws').select('id, registration_number, identity_no');
+      const { data: rData, error: rError } = await scopeQuery(
+        supabase.from('rickshaws').select('id, registration_number, identity_no, branch_id'));
       if (rError) throw rError;
       setRickshaws(rData || []);
 
-      const { data: tData, error: tError } = await supabase
+      const { data: tData, error: tError } = await scopeQuery(supabase
         .from('parts_transactions')
-        .select(`*, rickshaws(registration_number, identity_no)`)
+        .select(`*, rickshaws(registration_number, identity_no)`))
         .order('transaction_date', { ascending: false });
       
       if (tError) throw tError;
@@ -84,6 +101,10 @@ export default function Parts() {
   async function addTransaction(e) {
     e.preventDefault();
     if (!partName || !amount) return;
+    if (!branchId) {
+      alert('এটি কোন শাখার জন্য, সেটি নির্বাচন করুন।');
+      return;
+    }
     if (partName === MISC_PART && !partNote.trim()) {
       alert('বিবিধ যন্ত্রাংশের বিস্তারিত লিখুন।');
       return;
@@ -93,6 +114,7 @@ export default function Parts() {
       const { data, error } = await supabase
         .from('parts_transactions')
         .insert([{ 
+          branch_id: branchId,
           rickshaw_id: rickshawId || null, 
           transaction_type: type, 
           part_name: partName === MISC_PART ? `বিবিধ — ${partNote.trim()}` : partName, 
@@ -153,11 +175,14 @@ export default function Parts() {
             </button>
           </div>
 
+          {/* কোন শাখার জন্য এই ক্রয়/বিক্রয় */}
+          <BranchField value={branchId} onChange={setBranchId} />
+
           <div>
             <label className="form-label">রিক্সা/অটো নির্বাচন করুন (যদি নির্দিষ্ট রিক্সা/অটোর জন্য হয়)</label>
             <select className="form-input" value={rickshawId} onChange={(e) => setRickshawId(e.target.value)}>
               <option value="">-- রিক্সা/অটো সিলেক্ট করুন --</option>
-              {rickshaws.map(r => (
+              {branchRickshaws.map(r => (
                 <option key={r.id} value={r.id}>
                   {r.identity_no ? `[ID: ${r.identity_no}] ` : ''}{r.registration_number}
                 </option>
@@ -234,7 +259,10 @@ export default function Parts() {
                 className={`flex justify-between items-start gap-2 p-3 md:p-5 border border-white/10 border-l-4 rounded-xl bg-white/5 md:hover:bg-white/10 transition-colors duration-200 ${t.transaction_type === 'purchase' ? 'border-l-orange-500' : 'border-l-[#00f2fe]'}`}
               >
                 <div className="flex flex-col gap-0.5 text-white/70 min-w-0">
-                  <h4 className="m-0 text-base md:text-lg font-bold text-white break-words">{t.part_name}</h4>
+                  <h4 className="m-0 text-base md:text-lg font-bold text-white break-words flex items-center gap-2 flex-wrap">
+                    {t.part_name}
+                    <BranchTag branchId={t.branch_id} />
+                  </h4>
                   
                   <div className={`font-semibold text-sm md:text-[15px] ${t.transaction_type === 'purchase' ? 'text-orange-400' : 'text-[#00f2fe]'}`}>
                     {t.transaction_type === 'purchase' ? 'ক্রয়' : 'বিক্রয়'}: ৳ {bn(t.amount)}

@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import {
   Users as UsersIcon, Shield, User, UserPlus, Trash2, ShieldAlert,
-  Eye, EyeOff, KeyRound, RefreshCw, Copy, Check, Hash, Image as ImageIcon, X, Edit2, Save,
+  Eye, EyeOff, KeyRound, RefreshCw, Copy, Check, Hash, Image as ImageIcon, X, Edit2, Save, Building2,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useBranch } from '../contexts/BranchContext';
 import {
   authClient, LOGIN_DOMAIN, emailForUserId, isGeneratedEmail,
   nextUserNumber, randomPassword,
@@ -17,7 +18,15 @@ export default function Users() {
   const [users, setUsers] = useState([]);
   const [passwords, setPasswords] = useState({});   // auth user id -> stored password
   const [loading, setLoading] = useState(true);
-  const { userRole, user: currentUser } = useAuth();
+  const { isAdmin, isSuperAdmin, userBranchId, user: currentUser } = useAuth();
+  const { activeBranches, branchLabel } = useBranch();
+
+  // A branch admin creates people only for their own শাখা; the super admin
+  // may place a new account in any branch (or leave it branch-less, which
+  // only makes sense for another super admin).
+  const assignableBranches = isSuperAdmin
+    ? activeBranches
+    : activeBranches.filter((b) => b.id === userBranchId);
 
   // Create form — the user number is assigned automatically
   const [name, setName] = useState('');
@@ -25,6 +34,7 @@ export default function Users() {
   const [password, setPassword] = useState('');
   const [photoUrl, setPhotoUrl] = useState('');
   const [role, setRole] = useState('user');
+  const [branchId, setBranchId] = useState('');       // কোন শাখার ইউজার
   const [showNewPassword, setShowNewPassword] = useState(true);
   const [creating, setCreating] = useState(false);
 
@@ -35,6 +45,7 @@ export default function Users() {
   const [editName, setEditName] = useState('');
   const [editPhotoUrl, setEditPhotoUrl] = useState('');
   const [editRole, setEditRole] = useState('user');
+  const [editBranchId, setEditBranchId] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
   const [resetTarget, setResetTarget] = useState(null);
   const [resetPassword, setResetPassword] = useState('');
@@ -73,16 +84,42 @@ export default function Users() {
     e.preventDefault();
     if (!password) return;
 
-    const authEmail = emailForUserId(userId, email);
+    const typedEmail = email.trim();
 
     try {
       setCreating(true);
 
-      const { data: authData, error: authError } = await authClient.auth.signUp({
-        email: authEmail,
-        password,
-      });
-      if (authError) throw authError;
+      // The login number comes from the rows THIS admin can see, but Supabase
+      // Auth is global: 1001@arms.local may already exist — belonging to a
+      // branch this admin cannot see, or left behind by an earlier attempt
+      // that failed after signUp. Walk forward until a free number is found.
+      let assignedNumber = userId;
+      let authEmail = emailForUserId(assignedNumber, typedEmail);
+      let authData = null;
+
+      for (let attempt = 0; attempt < 25; attempt++) {
+        authEmail = emailForUserId(assignedNumber, typedEmail);
+        const { data, error } = await authClient.auth.signUp({ email: authEmail, password });
+
+        if (!error) { authData = data; break; }
+
+        const taken = /already[\s-]*(registered|exists)|User already/i.test(error.message || '');
+        if (!taken) throw error;
+
+        // An address the admin typed cannot be silently changed
+        if (typedEmail) {
+          throw new Error(
+            `"${typedEmail}" ঠিকানায় ইতিমধ্যে একটি অ্যাকাউন্ট আছে। অন্য ইমেইল দিন, ` +
+            'অথবা ইমেইলের ঘরটি ফাঁকা রেখে শুধু ইউজার নাম্বার দিয়ে অ্যাকাউন্ট তৈরি করুন।'
+          );
+        }
+
+        assignedNumber = String(Number(assignedNumber) + 1).padStart(4, '0');
+      }
+
+      if (!authData) {
+        throw new Error('কোনো ফাঁকা ইউজার নাম্বার পাওয়া যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।');
+      }
 
       const newUserId = authData.user?.id;
       if (!newUserId) {
@@ -93,7 +130,6 @@ export default function Users() {
 
       // Two admins could pick the same number at the same time; on a unique
       // violation take the next free number from the database and retry.
-      let assignedNumber = userId;
       let dbError = null;
       for (let attempt = 0; attempt < 5; attempt++) {
         const { error } = await supabase.from('users').upsert({
@@ -103,6 +139,7 @@ export default function Users() {
           email: authEmail,
           photo_url: photoUrl.trim() || null,
           role,
+          branch_id: role === 'super_admin' ? null : (branchId || null),
         });
         if (!error) { dbError = null; break; }
         dbError = error;
@@ -112,13 +149,28 @@ export default function Users() {
       }
       if (dbError) throw dbError;
 
+      // From here the account EXISTS and can already log in. Saving the
+      // admin-visible copy of the password is a separate, non-essential step,
+      // so a failure here must not be reported as "user creation failed".
       const { error: credError } = await supabase
         .from('user_credentials')
         .upsert({ user_id: newUserId, password, updated_at: new Date().toISOString() });
-      if (credError) throw credError;
 
-      alert(`ইউজার সফলভাবে তৈরি হয়েছে! ইউজার নাম্বার: ${assignedNumber}`);
+      if (credError) {
+        alert(
+          `ইউজার তৈরি হয়েছে — ইউজার নাম্বার: ${assignedNumber}\n` +
+          `পাসওয়ার্ড: ${password}\n\n` +
+          'তবে পাসওয়ার্ডের সংরক্ষিত কপিটি রাখা যায়নি, তাই তালিকায় "পাসওয়ার্ড দেখুন" ' +
+          'অংশে এটি দেখা যাবে না। এখনই পাসওয়ার্ডটি লিখে রাখুন।\n\n' +
+          'ঠিক করতে update_branches.sql স্ক্রিপ্টটি আবার চালান।\n\n' +
+          `কারণ: ${credError.message}`
+        );
+      } else {
+        alert(`ইউজার সফলভাবে তৈরি হয়েছে! ইউজার নাম্বার: ${assignedNumber}`);
+      }
+
       setName(''); setEmail(''); setPassword(''); setPhotoUrl(''); setRole('user');
+      setBranchId(isSuperAdmin ? '' : (userBranchId || ''));
       fetchUsers();
     } catch (error) {
       alert('Error creating user: ' + error.message);
@@ -132,6 +184,7 @@ export default function Users() {
     setEditName(u.name || '');
     setEditPhotoUrl(u.photo_url || '');
     setEditRole(u.role || 'user');
+    setEditBranchId(u.branch_id || '');
   }
 
   async function handleSaveEdit(e) {
@@ -146,6 +199,9 @@ export default function Users() {
         // An admin editing their own account keeps their role, otherwise they
         // could demote themselves and lose access to this page instantly.
         role: editTarget.id === currentUser?.id ? editTarget.role : editRole,
+        branch_id: editTarget.id === currentUser?.id
+          ? editTarget.branch_id
+          : (editRole === 'super_admin' ? null : (editBranchId || null)),
       };
 
       const { error } = await supabase.from('users').update(patch).eq('id', editTarget.id);
@@ -233,7 +289,7 @@ export default function Users() {
     }
   }
 
-  if (userRole !== 'admin') {
+  if (!isAdmin) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center">
         <ShieldAlert size={64} className="text-red-500 mb-4" />
@@ -265,7 +321,10 @@ export default function Users() {
               />
               <Hash size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#00f2fe]/60 pointer-events-none" />
             </div>
-            <p className="text-white/40 text-xs mt-1.5">৪ ডিজিটের ইউনিক নাম্বার, স্বয়ংক্রিয়ভাবে নির্ধারিত। এটি দিয়েই ইউজার লগইন করবে।</p>
+            <p className="text-white/40 text-xs mt-1.5">
+              ৪ ডিজিটের ইউনিক নাম্বার, স্বয়ংক্রিয়ভাবে নির্ধারিত। এটি দিয়েই ইউজার লগইন করবে।
+              নাম্বারটি আগে থেকে দখলে থাকলে পরের ফাঁকা নাম্বারটি ব্যবহৃত হবে — সংরক্ষণের পর তা জানিয়ে দেওয়া হবে।
+            </p>
           </div>
 
           <div>
@@ -327,9 +386,32 @@ export default function Users() {
           <div>
             <label className="form-label">রোল (Role)</label>
             <select className="form-input" value={role} onChange={(e) => setRole(e.target.value)}>
-              <option value="user">User (সাধারণ এক্সেস)</option>
-              <option value="admin">Admin (সম্পূর্ণ এক্সেস)</option>
+              <option value="user">User (শুধু এন্ট্রি — ডিলিট/এডিট নেই)</option>
+              <option value="admin">Admin (নিজ শাখার সব কিছু)</option>
+              {/* Only a super admin may mint another super admin */}
+              {isSuperAdmin && <option value="super_admin">Super Admin (সকল শাখা)</option>}
             </select>
+          </div>
+
+          <div>
+            <label className="form-label">শাখা (Branch)</label>
+            <select
+              className="form-input disabled:opacity-60 disabled:cursor-not-allowed"
+              value={role === 'super_admin' ? '' : branchId}
+              onChange={(e) => setBranchId(e.target.value)}
+              disabled={role === 'super_admin' || !isSuperAdmin}
+              required={role !== 'super_admin'}
+            >
+              <option value="">
+                {role === 'super_admin' ? '— সকল শাখা —' : '-- শাখা নির্বাচন করুন --'}
+              </option>
+              {assignableBranches.map((b) => (
+                <option key={b.id} value={b.id}>{b.name} ({b.code})</option>
+              ))}
+            </select>
+            {role === 'super_admin' && (
+              <p className="text-white/40 text-xs mt-1.5">সুপার অ্যাডমিন সব শাখাতেই কাজ করেন।</p>
+            )}
           </div>
 
           <div>
@@ -381,7 +463,7 @@ export default function Users() {
 
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className={`w-11 h-11 rounded-full overflow-hidden flex items-center justify-center shrink-0 font-bold ${u.role === 'admin' ? 'bg-[#00f2fe]/20 text-[#00f2fe]' : 'bg-white/10 text-white/70'}`}>
+                    <div className={`w-11 h-11 rounded-full overflow-hidden flex items-center justify-center shrink-0 font-bold ${u.role === 'super_admin' ? 'bg-violet-500/20 text-violet-300' : u.role === 'admin' ? 'bg-[#00f2fe]/20 text-[#00f2fe]' : 'bg-white/10 text-white/70'}`}>
                       {u.photo_url
                         ? <img src={u.photo_url} alt="" className="w-full h-full object-cover" />
                         : <span>{initials(u)}</span>}
@@ -394,11 +476,20 @@ export default function Users() {
                         {u.user_id && <span className="id-badge">{u.user_id}</span>}
                         {!isGeneratedEmail(u.email) && <span className="truncate">{u.email}</span>}
                       </div>
+                      <div className="text-xs text-violet-300/80 truncate mt-1">
+                        <Building2 size={11} className="inline mb-0.5 mr-1" />
+                        {u.role === 'super_admin' ? 'সকল শাখা' : branchLabel(u.branch_id)}
+                      </div>
                     </div>
                   </div>
 
-                  <span className={`text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full shrink-0 font-bold ${u.role === 'admin' ? 'bg-[#00f2fe]/15 text-[#00f2fe] border border-[#00f2fe]/30' : 'bg-white/10 text-white/60 border border-white/10'}`}>
-                    {u.role === 'admin' ? <Shield size={11} className="inline mb-0.5 mr-1" /> : <User size={11} className="inline mb-0.5 mr-1" />}
+                  <span className={`text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full shrink-0 font-bold ${
+                    u.role === 'super_admin' ? 'bg-violet-500/15 text-violet-300 border border-violet-500/30'
+                      : u.role === 'admin' ? 'bg-[#00f2fe]/15 text-[#00f2fe] border border-[#00f2fe]/30'
+                      : 'bg-white/10 text-white/60 border border-white/10'}`}>
+                    {u.role === 'user'
+                      ? <User size={11} className="inline mb-0.5 mr-1" />
+                      : <Shield size={11} className="inline mb-0.5 mr-1" />}
                     {u.role}
                   </span>
                 </div>
@@ -527,12 +618,34 @@ export default function Users() {
                   onChange={(e) => setEditRole(e.target.value)}
                   disabled={editTarget.id === currentUser?.id}
                 >
-                  <option value="user">User (সাধারণ এক্সেস)</option>
-                  <option value="admin">Admin (সম্পূর্ণ এক্সেস)</option>
+                  <option value="user">User (শুধু এন্ট্রি — ডিলিট/এডিট নেই)</option>
+                  <option value="admin">Admin (নিজ শাখার সব কিছু)</option>
+                  {isSuperAdmin && <option value="super_admin">Super Admin (সকল শাখা)</option>}
                 </select>
                 {editTarget.id === currentUser?.id && (
                   <p className="text-amber-400/90 text-xs mt-1.5">নিজের রোল পরিবর্তন করা যাবে না।</p>
                 )}
+              </div>
+
+              <div>
+                <label className="form-label">শাখা (Branch)</label>
+                <select
+                  className="form-input disabled:opacity-60 disabled:cursor-not-allowed"
+                  value={editRole === 'super_admin' ? '' : editBranchId}
+                  onChange={(e) => setEditBranchId(e.target.value)}
+                  disabled={
+                    editTarget.id === currentUser?.id ||
+                    editRole === 'super_admin' ||
+                    !isSuperAdmin
+                  }
+                >
+                  <option value="">
+                    {editRole === 'super_admin' ? '— সকল শাখা —' : '-- শাখা নির্বাচন করুন --'}
+                  </option>
+                  {assignableBranches.map((b) => (
+                    <option key={b.id} value={b.id}>{b.name} ({b.code})</option>
+                  ))}
+                </select>
               </div>
 
               <p className="text-white/40 text-xs">

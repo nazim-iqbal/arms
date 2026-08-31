@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useBranch } from '../contexts/BranchContext';
+import { BranchField, BranchTag } from '../components/BranchField';
 import { UserCheck, Plus, Trash2, Edit2, CarFront, Hash, User, CheckCircle2, XCircle, LogOut, Phone } from 'lucide-react';
 import { today, formatDate } from '../lib/date';
 
 export default function AssignDriverVehicle() {
   // Only an admin may delete; everyone else can add and edit
-  const { userRole } = useAuth();
-  const isAdmin = userRole === 'admin';
+  const { isAdmin } = useAuth();
+  const { activeBranchId, scopeQuery } = useBranch();
+  const [branchId, setBranchId] = useState('');       // কোন শাখার অ্যাসাইনমেন্ট
 
   const [rickshaws, setRickshaws] = useState([]);
   const [drivers, setDrivers] = useState([]);
@@ -34,38 +37,58 @@ export default function AssignDriverVehicle() {
   const filteredAssignments = filterRickshawId
     ? assignments.filter(item => item.rickshaw_id === filterRickshawId)
     : assignments;
+  // A driver may only be put on a vehicle of their own branch
+  const branchRickshaws = branchId
+    ? rickshaws.filter(r => r.branch_id === branchId)
+    : rickshaws;
+  const branchDrivers = branchId
+    ? drivers.filter(d => d.branch_id === branchId)
+    : drivers;
+
   useEffect(() => {
     fetchData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeBranchId]);
+
+  // Clear picks that belong to a branch no longer in view
+  useEffect(() => {
+    if (selectedRickshawId && !branchRickshaws.some(r => r.id === selectedRickshawId)) {
+      setSelectedRickshawId('');
+    }
+    if (selectedDriverId && !branchDrivers.some(d => d.id === selectedDriverId)) {
+      setSelectedDriverId('');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [branchId, rickshaws, drivers]);
 
   async function fetchData() {
     try {
       setLoading(true);
       
       // 1. Fetch vehicles (order by identity_no)
-      const { data: rData, error: rError } = await supabase
+      const { data: rData, error: rError } = await scopeQuery(supabase
         .from('rickshaws')
-        .select('id, identity_no, registration_number, vehicle_type')
+        .select('id, identity_no, registration_number, vehicle_type, branch_id'))
         .order('identity_no', { ascending: true });
       if (rError) throw rError;
       setRickshaws(rData || []);
 
       // 2. Fetch drivers
-      const { data: dData, error: dError } = await supabase
+      const { data: dData, error: dError } = await scopeQuery(supabase
         .from('drivers')
-        .select('id, name, phone, nid_no')
+        .select('id, name, phone, nid_no, branch_id'))
         .order('name', { ascending: true });
       if (dError) throw dError;
       setDrivers(dData || []);
 
       // 3. Fetch assignments with joined vehicle and driver info
-      const { data: aData, error: aError } = await supabase
+      const { data: aData, error: aError } = await scopeQuery(supabase
         .from('driver_vehicle_assignments')
         .select(`
           *,
           rickshaws (identity_no, registration_number, vehicle_type),
           drivers (name, phone, nid_no)
-        `)
+        `))
         .order('created_at', { ascending: false });
       if (aError) throw aError;
       setAssignments(aData || []);
@@ -100,6 +123,10 @@ export default function AssignDriverVehicle() {
       alert('অনুগ্রহ করে ড্রাইভার নির্বাচন করুন।');
       return;
     }
+    if (!branchId) {
+      alert('এটি কোন শাখার জন্য, সেটি নির্বাচন করুন।');
+      return;
+    }
 
     try {
       // If status is 'active', release any existing active assignments for this vehicle or driver
@@ -125,6 +152,7 @@ export default function AssignDriverVehicle() {
       const { error: insertError } = await supabase
         .from('driver_vehicle_assignments')
         .insert([{
+          branch_id: branchId,
           rickshaw_id: selectedRickshawId,
           driver_id: selectedDriverId,
           assign_date: assignDate,
@@ -265,6 +293,9 @@ export default function AssignDriverVehicle() {
         </h3>
 
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5 items-start">
+
+          {/* কোন শাখার জন্য এই অ্যাসাইনমেন্ট */}
+          <BranchField value={branchId} onChange={setBranchId} />
           
           {/* 1. Identity No Dropdown */}
           <div className="form-group">
@@ -317,7 +348,7 @@ export default function AssignDriverVehicle() {
               required
             >
               <option value="">-- ড্রাইভার নির্বাচন করুন --</option>
-              {drivers
+              {branchDrivers
                 .filter(d => !assignments.some(a => a.status === 'active' && a.driver_id === d.id))
                 .map(d => (
                 <option key={d.id} value={d.id}>
@@ -365,7 +396,7 @@ export default function AssignDriverVehicle() {
               onChange={(e) => setFilterRickshawId(e.target.value)}
             >
               <option value="">সব রিকশা/অটো (All)</option>
-              {rickshaws.map(r => (
+              {branchRickshaws.map(r => (
                 <option key={r.id} value={r.id}>
                   ID: {r.identity_no || 'N/A'} - {r.registration_number}
                 </option>
@@ -389,6 +420,7 @@ export default function AssignDriverVehicle() {
                     <span className="inline-flex items-center gap-1.5 flex-wrap">
                       <span className="id-badge"><Hash size={11} />{item.rickshaws?.identity_no || 'N/A'}</span>
                       <span className="text-white/85 text-sm font-semibold">{item.rickshaws?.registration_number || 'N/A'}</span>
+                      <BranchTag branchId={item.branch_id} />
                     </span>
                     <span className="flex items-center gap-1.5 text-sm font-bold text-white">
                       <User size={13} className="text-[#00f2fe] shrink-0" /> {item.drivers?.name || 'N/A'}

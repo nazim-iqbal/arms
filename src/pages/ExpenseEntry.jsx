@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useBranch } from '../contexts/BranchContext';
+import { BranchField, BranchTag } from '../components/BranchField';
 import { ArrowDownCircle, Trash2, Plus, Receipt, MessageSquare } from 'lucide-react';
 import { today, formatDate, bn } from '../lib/date';
 
@@ -28,8 +30,8 @@ const DETAIL_PLACEHOLDERS = {
 
 export default function ExpenseEntry() {
   // Only an admin may delete; everyone else can add and edit
-  const { userRole } = useAuth();
-  const isAdmin = userRole === 'admin';
+  const { isAdmin } = useAuth();
+  const { activeBranchId, scopeQuery } = useBranch();
 
   const [expenses, setExpenses] = useState([]);
   const [rickshaws, setRickshaws] = useState([]);
@@ -37,30 +39,39 @@ export default function ExpenseEntry() {
   const [saving, setSaving] = useState(false);
 
   // Form state
+  const [branchId, setBranchId] = useState('');       // কোন শাখার খরচ
   const [rickshawId, setRickshawId] = useState('');
   const [date, setDate] = useState(today());
   const [amount, setAmount] = useState('');
   const [particulars, setParticulars] = useState('');
   const [detailNote, setDetailNote] = useState('');   // "মেরামত"/"বিবিধ" হলে তার বিস্তারিত
 
+  // Switching branch in the header reloads this screen's books
   useEffect(() => {
     fetchData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeBranchId]);
+
+  // A vehicle from the old branch must not stay selected after a switch
+  useEffect(() => {
+    if (rickshawId && !branchRickshaws.some(r => r.id === rickshawId)) setRickshawId('');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [branchId, rickshaws]);
 
   async function fetchData() {
     try {
       setLoading(true);
 
-      const { data: rData, error: rError } = await supabase
+      const { data: rData, error: rError } = await scopeQuery(supabase
         .from('rickshaws')
-        .select('id, identity_no, registration_number, vehicle_type')
+        .select('id, identity_no, registration_number, vehicle_type, branch_id'))
         .order('identity_no', { ascending: true });
       if (rError) throw rError;
       setRickshaws(rData || []);
 
-      const { data: eData, error: eError } = await supabase
+      const { data: eData, error: eError } = await scopeQuery(supabase
         .from('daily_expenses')
-        .select(`*, rickshaws(registration_number, identity_no, vehicle_type)`)
+        .select(`*, rickshaws(registration_number, identity_no, vehicle_type)`))
         .order('date', { ascending: false })
         .order('created_at', { ascending: false });
       if (eError) throw eError;
@@ -79,6 +90,7 @@ export default function ExpenseEntry() {
     setAmount('');
     setParticulars('');
     setDetailNote('');
+    // branchId is deliberately kept: the next entry is for the same শাখা
   }
 
   // ধরণ বদলালে — বিস্তারিত লাগে না এমন কিছু হলে ঘরটি খালি হয়ে যায়
@@ -90,6 +102,10 @@ export default function ExpenseEntry() {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!amount) return;
+    if (!branchId) {
+      alert('এই খরচটি কোন শাখার জন্য, সেটি নির্বাচন করুন।');
+      return;
+    }
     if (!particulars) {
       alert('খরচের ধরণ নির্বাচন করুন।');
       return;
@@ -104,6 +120,7 @@ export default function ExpenseEntry() {
       const { data, error } = await supabase
         .from('daily_expenses')
         .insert([{
+          branch_id: branchId,
           rickshaw_id: rickshawId || null,
           date,
           amount: Number(amount),
@@ -135,6 +152,11 @@ export default function ExpenseEntry() {
     }
   }
 
+  // Only the chosen branch's vehicles can carry this expense
+  const branchRickshaws = branchId
+    ? rickshaws.filter(r => r.branch_id === branchId)
+    : rickshaws;
+
   const todaysExpense = expenses.filter(e => e.date === today()).reduce((s, e) => s + Number(e.amount || 0), 0);
 
   return (
@@ -165,6 +187,9 @@ export default function ExpenseEntry() {
 
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5 items-start">
 
+          {/* কোন শাখার জন্য এই খরচ */}
+          <BranchField value={branchId} onChange={setBranchId} />
+
           <div className="form-group !mb-0">
             <label className="form-label">রিক্সা নাম্বার (Vehicle)</label>
             <select
@@ -173,7 +198,7 @@ export default function ExpenseEntry() {
               onChange={(e) => setRickshawId(e.target.value)}
             >
               <option value="">-- রিক্সা/অটো নির্বাচন করুন (ঐচ্ছিক) --</option>
-              {rickshaws.map(r => (
+              {branchRickshaws.map(r => (
                 <option key={r.id} value={r.id}>
                   ID: {r.identity_no || 'N/A'} ({r.vehicle_type || 'Vehicle'}) - {r.registration_number}
                 </option>
@@ -282,7 +307,10 @@ export default function ExpenseEntry() {
                     ) : (
                       <span className="text-white/40 text-sm">সাধারণ খরচ</span>
                     )}
-                    <span className="text-white/45 text-xs font-mono">{formatDate(expense.date)}</span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="text-white/45 text-xs font-mono">{formatDate(expense.date)}</span>
+                      <BranchTag branchId={expense.branch_id} />
+                    </span>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <span className="font-bold text-red-400 text-base">৳ {bn(expense.amount)}</span>
@@ -321,7 +349,12 @@ export default function ExpenseEntry() {
               <tbody className="divide-y divide-white/5 text-sm text-white/80">
                 {expenses.map(expense => (
                   <tr key={expense.id} className="hover:bg-white/5 transition-colors duration-150">
-                    <td className="p-4 whitespace-nowrap text-white/70 font-mono">{formatDate(expense.date)}</td>
+                    <td className="p-4 whitespace-nowrap text-white/70 font-mono">
+                      <span className="inline-flex items-center gap-1.5">
+                        {formatDate(expense.date)}
+                        <BranchTag branchId={expense.branch_id} />
+                      </span>
+                    </td>
                     <td className="p-4 whitespace-nowrap">
                       {expense.rickshaws ? (
                         <span className="inline-flex items-center gap-1.5">

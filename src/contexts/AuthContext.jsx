@@ -8,6 +8,7 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [userRole, setUserRole] = useState(null);
+  const [userBranchId, setUserBranchId] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -15,7 +16,7 @@ export const AuthProvider = ({ children }) => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchUserRole(session.user.id);
+        fetchUserProfile(session.user.id);
       } else {
         setLoading(false);
       }
@@ -25,9 +26,10 @@ export const AuthProvider = ({ children }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchUserRole(session.user.id);
+        fetchUserProfile(session.user.id);
       } else {
         setUserRole(null);
+        setUserBranchId(null);
         setLoading(false);
       }
     });
@@ -35,18 +37,19 @@ export const AuthProvider = ({ children }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const fetchUserRole = async (userId) => {
+  const fetchUserProfile = async (userId) => {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('role')
+        .select('role, branch_id')
         .eq('id', userId)
         .single();
-      
+
       if (error) {
         console.error('Error fetching role:', error);
       } else if (data) {
         setUserRole(data.role);
+        setUserBranchId(data.branch_id || null);
       }
     } catch (err) {
       console.error('Error:', err);
@@ -66,9 +69,17 @@ export const AuthProvider = ({ children }) => {
     if (error) throw error;
   };
 
+  // Three tiers. The same rules are enforced by RLS in update_branches.sql —
+  // these flags only decide what the screen bothers to show.
+  const isSuperAdmin = userRole === 'super_admin';
+  const isAdmin = userRole === 'admin' || isSuperAdmin;   // may edit / delete
+
   const value = {
     user,
     userRole,
+    userBranchId,
+    isSuperAdmin,
+    isAdmin,
     login,
     logout,
     loading
