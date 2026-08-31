@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="bn">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICB Golden Jubilee Countdown</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Outfit:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+
+    <style>
+        /* SolaimanLipi - uses the system copy first, then a CDN copy,
+           or drop "SolaimanLipi.woff2" beside this file to self-host it. */
+        @font-face {
+            font-family: "SolaimanLipi";
+            src: local("SolaimanLipi"),
+                 local("Solaiman Lipi"),
+                 url("SolaimanLipi.woff2") format("woff2"),
+                 url("https://cdn.jsdelivr.net/gh/maateen/bangla-web-fonts@master/fonts/SolaimanLipi/SolaimanLipi.woff2") format("woff2"),
+                 url("https://cdn.jsdelivr.net/gh/maateen/bangla-web-fonts@master/fonts/SolaimanLipi/SolaimanLipi.woff") format("woff");
+            font-weight: 400 700;
+            font-display: swap;
+        }
+    </style>
+
+    <style>
+        :root {
+            /* ICB brand palette taken from the banner */
+            --navy: #10256b;
+            --navy-deep: #0a1846;
+            --blue: #1b4fd8;
+            --blue-light: #4f86f7;
+            --gold: #c8891f;
+            --gold-deep: #8a5d0a;
+            --gold-light: #f2c96b;
+            --gold-bright: #ffe6a8;
+            --red: #e8412f;
+            --card-radius: 24px;
+            --ease-out: cubic-bezier(.22, 1, .36, 1);
+        }
+
+        * { box-sizing: border-box; }
+
+        html, body {
+            margin: 0;
+            width: 100%;
+            min-height: 100%;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(120% 120% at 20% 30%, #0a2f6b 0%, #061b45 55%, #030d24 100%);
+            font-family: "Outfit", "Hind Siliguri", "Segoe UI", Arial, sans-serif;
+            overflow: hidden;
+        }
+
+        /* ============ SCENE ============ */
+        .scene {
+            position: relative;
+            width: min(1365px, 100vw);
+            aspect-ratio: 1365/768;
+            background: url("background.png") center/cover no-repeat, #eef2f8;
+            overflow: hidden;
+            box-shadow: 0 40px 120px rgba(0, 0, 0, .55);
+        }
+
+        /* very soft veil over the left half only, so the clock stays readable */
+        .scene::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(46% 52% at 26% 54%, rgba(255, 255, 255, .55), rgba(255, 255, 255, .12) 62%, transparent 78%);
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        /* slow drifting golden aura behind the clock */
+        .aura {
+            position: absolute;
+            z-index: 1;
+            left: -6%;
+            top: 54%;
+            width: 52%;
+            aspect-ratio: 1;
+            transform: translateY(-50%);
+            background: radial-gradient(circle, rgba(242, 201, 107, .30) 0%, rgba(200, 137, 31, .10) 40%, transparent 68%);
+            filter: blur(8px);
+            animation: auraPulse 7s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes auraPulse {
+            0%, 100% { opacity: .5; transform: translateY(-50%) scale(1); }
+            50%      { opacity: 1;  transform: translateY(-50%) scale(1.07); }
+        }
+
+        /* floating gold dust */
+        .dust {
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .dust i {
+            position: absolute;
+            bottom: -14px;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--gold-bright), rgba(200, 137, 31, 0) 70%);
+            opacity: 0;
+            animation: rise linear infinite;
+        }
+
+        @keyframes rise {
+            0%   { opacity: 0;  transform: translateY(0) scale(.6); }
+            12%  { opacity: .85; }
+            80%  { opacity: .45; }
+            100% { opacity: 0;  transform: translateY(-92vh) translateX(26px) scale(1.15); }
+        }
+
+        /* ============ CLOCK AREA (left free zone of the banner) ============ */
+        .clock-area {
+            position: absolute;
+            z-index: 3;
+            left: 3.4%;
+            top: 25.5%;
+            width: 45%;
+            animation: fadeUp 1.1s var(--ease-out) both;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(22px); }
+            to   { opacity: 1; transform: none; }
+        }
+
+        /* ---- title ---- */
+        .head {
+            /* pushed half an inch lower, as requested */
+            margin-top: 0.5in;
+            text-align: center;
+        }
+
+        .kicker {
+            font-size: clamp(11px, 1.15vw, 19px);
+            font-weight: 800;
+            letter-spacing: 4.5px;
+            text-transform: uppercase;
+            background: linear-gradient(100deg,
+                    var(--navy) 0%,
+                    var(--blue) 22%,
+                    var(--gold-deep) 40%,
+                    var(--gold-bright) 50%,
+                    var(--gold-deep) 60%,
+                    var(--blue) 78%,
+                    var(--navy) 100%);
+            background-size: 260% 100%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            animation: sheen 6s linear infinite;
+            filter: drop-shadow(0 2px 4px rgba(255, 255, 255, .9));
+        }
+
+        @keyframes sheen {
+            from { background-position: 260% 0; }
+            to   { background-position: -60% 0; }
+        }
+
+        .kicker-bn {
+            margin-top: 5px;
+            font-family: "Hind Siliguri", sans-serif;
+            font-weight: 700;
+            font-size: clamp(10px, 1.02vw, 17px);
+            letter-spacing: 1px;
+            background: linear-gradient(92deg, var(--gold-deep), var(--gold), var(--red), var(--gold));
+            background-size: 220% 100%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            animation: sheen 8s linear infinite reverse;
+        }
+
+        .divider {
+            position: relative;
+            width: 44%;
+            height: 3px;
+            margin: 13px auto 20px;
+            background: linear-gradient(90deg, transparent, var(--gold), var(--gold-light), var(--gold), transparent);
+            border-radius: 3px;
+        }
+
+        .divider::before {
+            content: "";
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 9px;
+            height: 9px;
+            margin: -4.5px 0 0 -4.5px;
+            border-radius: 50%;
+            background: var(--gold-light);
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, .85), 0 0 14px var(--gold);
+            animation: gem 3s ease-in-out infinite;
+        }
+
+        @keyframes gem {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            50%      { transform: scale(1.35) rotate(180deg); }
+        }
+
+        /* ---- countdown grid ---- */
+        .countdown {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: clamp(7px, .82vw, 13px);
+        }
+
+        .unit-card {
+            position: relative;
+            min-width: 0;
+            padding: clamp(9px, .85vw, 15px) 6px clamp(9px, .8vw, 14px);
+            text-align: center;
+            border-radius: var(--card-radius);
+            overflow: hidden;
+            background:
+                linear-gradient(145deg, rgba(200, 148, 24, .58) 0%, rgba(247, 220, 138, .30) 45%, rgba(255, 255, 255, .55) 100%);
+            border: 2px solid rgba(255, 255, 255, .88);
+            box-shadow:
+                0 16px 38px rgba(7, 39, 87, .26),
+                inset 0 1px 0 rgba(255, 255, 255, .95),
+                inset 0 -14px 26px rgba(255, 255, 255, .28);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            transition: transform .45s var(--ease-out), box-shadow .45s var(--ease-out);
+            animation: cardIn .8s var(--ease-out) both;
+        }
+
+        .unit-card:nth-child(1) { animation-delay: .10s; }
+        .unit-card:nth-child(2) { animation-delay: .22s; }
+        .unit-card:nth-child(3) { animation-delay: .34s; }
+        .unit-card:nth-child(4) { animation-delay: .46s; }
+
+        @keyframes cardIn {
+            from { opacity: 0; transform: translateY(24px) scale(.94); }
+            to   { opacity: 1; transform: none; }
+        }
+
+        .unit-card:hover {
+            transform: translateY(-6px);
+            box-shadow:
+                0 24px 48px rgba(16, 37, 107, .30),
+                inset 0 1px 0 rgba(255, 255, 255, 1);
+        }
+
+        /* gold top accent */
+        .unit-card::before {
+            content: "";
+            position: absolute;
+            left: 16%;
+            right: 16%;
+            top: 0;
+            height: 3px;
+            border-radius: 0 0 6px 6px;
+            background: linear-gradient(90deg, transparent, var(--gold-bright), var(--gold), transparent);
+            z-index: 3;
+        }
+
+        /* travelling shine sweep */
+        .unit-card::after {
+            content: "";
+            position: absolute;
+            top: -60%;
+            left: -70%;
+            width: 42%;
+            height: 220%;
+            background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .75), transparent);
+            transform: rotate(16deg);
+            animation: sweep 5.5s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .unit-card:nth-child(2)::after { animation-delay: .5s; }
+        .unit-card:nth-child(3)::after { animation-delay: 1s; }
+        .unit-card:nth-child(4)::after { animation-delay: 1.5s; }
+
+        @keyframes sweep {
+            0%       { left: -70%; }
+            55%,100% { left: 145%; }
+        }
+
+        /* ---- dial: ring + number + icon ---- */
+        .dial {
+            position: relative;
+            width: clamp(62px, 6.9vw, 104px);
+            margin: 0 auto;
+            aspect-ratio: 1;
+            display: grid;
+            place-items: center;
+            z-index: 3;
+        }
+
+        .ring {
+            position: absolute;
+            inset: 0;
+            transform: rotate(-90deg);
+        }
+
+        .ring .track {
+            fill: none;
+            stroke: rgba(255, 255, 255, .58);
+            stroke-width: 5;
+        }
+
+        .ring .bar {
+            fill: none;
+            stroke: url(#goldGrad);
+            stroke-width: 5;
+            stroke-linecap: round;
+            filter: drop-shadow(0 0 4px rgba(200, 137, 31, .8));
+        }
+
+        .unit-card:nth-child(4) .ring .bar { stroke: url(#redGrad); }
+
+        /* ---- the numbers: navy → royal blue with a travelling gold shine ---- */
+        .number {
+            position: relative;
+            font-size: clamp(27px, 3.35vw, 54px);
+            line-height: .95;
+            font-weight: 900;
+            letter-spacing: -1.5px;
+            font-variant-numeric: tabular-nums;
+            background: linear-gradient(115deg,
+                    var(--navy-deep) 0%,
+                    var(--navy) 20%,
+                    var(--blue) 36%,
+                    var(--gold-light) 47%,
+                    #fffdf0 55%,
+                    var(--blue) 68%,
+                    var(--navy) 86%,
+                    var(--navy-deep) 100%);
+            background-size: 320% 100%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            filter: drop-shadow(0 2px 2px rgba(255, 255, 255, .95)) drop-shadow(0 6px 14px rgba(16, 37, 107, .22));
+            animation: numShine 6s linear infinite;
+        }
+
+        /* seconds card carries the logo's red accent */
+        #seconds {
+            background: linear-gradient(115deg,
+                    var(--navy-deep) 0%,
+                    var(--navy) 22%,
+                    var(--red) 46%,
+                    #fffdf0 55%,
+                    var(--red) 64%,
+                    var(--navy) 84%,
+                    var(--navy-deep) 100%);
+            background-size: 320% 100%;
+            -webkit-background-clip: text;
+            background-clip: text;
+        }
+
+        @keyframes numShine {
+            from { background-position: 320% 0; }
+            to   { background-position: -60% 0; }
+        }
+
+        .icon {
+            position: absolute;
+            bottom: -5%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: clamp(19px, 1.75vw, 28px);
+            height: clamp(19px, 1.75vw, 28px);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--navy);
+            background: #fff;
+            border: 1.4px solid rgba(200, 137, 31, .85);
+            box-shadow: 0 4px 10px rgba(16, 37, 107, .20);
+        }
+
+        .unit-card:nth-child(4) .icon { color: var(--red); border-color: rgba(232, 65, 47, .6); }
+
+        .icon svg {
+            width: 60%;
+            height: 60%;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .unit-card:nth-child(2) .icon svg,
+        .unit-card:nth-child(4) .icon svg {
+            animation: spin 8s linear infinite;
+            transform-origin: 50% 50%;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .label {
+            margin-top: 13px;
+            color: var(--blue);
+            font-size: clamp(8px, .72vw, 12px);
+            font-weight: 800;
+            letter-spacing: 2.4px;
+            position: relative;
+            z-index: 3;
+        }
+
+        .unit-card:nth-child(4) .label { color: var(--red); }
+
+        .bn {
+            margin-top: 2px;
+            font-family: "Hind Siliguri", sans-serif;
+            color: var(--gold-deep);
+            font-size: clamp(9px, .74vw, 13px);
+            font-weight: 700;
+            position: relative;
+            z-index: 3;
+        }
+
+        /* flip-in on value change (gradient shine keeps running underneath) */
+        .number.change {
+            animation: flipIn .55s var(--ease-out), numShine 6s linear infinite;
+        }
+
+        @keyframes flipIn {
+            0%   { opacity: .1; transform: perspective(420px) rotateX(-72deg) translateY(-10px); }
+            60%  { opacity: 1;  transform: perspective(420px) rotateX(12deg) translateY(3px); }
+            100% { opacity: 1;  transform: none; }
+        }
+
+        #seconds.change {
+            animation: flipIn .55s var(--ease-out), numShine 6s linear infinite, tickGlow 1s ease-out;
+        }
+
+        @keyframes tickGlow {
+            0%   { filter: drop-shadow(0 2px 2px rgba(255, 255, 255, .95)) drop-shadow(0 0 14px rgba(232, 65, 47, .85)); }
+            100% { filter: drop-shadow(0 2px 2px rgba(255, 255, 255, .95)) drop-shadow(0 6px 14px rgba(16, 37, 107, .22)); }
+        }
+
+        /* ---- journey progress ---- */
+        .journey {
+            width: 88%;
+            margin: 22px auto 0;
+        }
+
+        .journey-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-size: clamp(8px, .68vw, 11px);
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            color: var(--navy);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+
+        .journey-top b {
+            color: var(--gold-deep);
+            font-size: 1.2em;
+            letter-spacing: .5px;
+        }
+
+        .bar-outer {
+            height: 7px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, .85);
+            border: 1px solid rgba(200, 137, 31, .35);
+            box-shadow: inset 0 1px 3px rgba(16, 37, 107, .18);
+            overflow: hidden;
+        }
+
+        .bar-inner {
+            height: 100%;
+            width: 0;
+            border-radius: 20px;
+            background: linear-gradient(90deg, var(--navy), var(--blue), var(--gold), var(--gold-bright), var(--gold));
+            background-size: 220% 100%;
+            animation: flow 3.2s linear infinite;
+            transition: width 1s var(--ease-out);
+            box-shadow: 0 0 10px rgba(200, 137, 31, .65);
+        }
+
+        @keyframes flow {
+            to { background-position: -220% 0; }
+        }
+
+        .ornament {
+            width: 62%;
+            height: 1px;
+            margin: 18px auto 0;
+            background: linear-gradient(90deg, transparent, rgba(200, 137, 31, .9), transparent);
+        }
+
+        .target-line {
+            margin-top: 12px;
+            text-align: center;
+            font-family: "SolaimanLipi", "Hind Siliguri", sans-serif;
+            font-size: clamp(14px, 1.42vw, 24px);
+            line-height: 1.5;
+            font-weight: 700;
+            color: var(--navy);
+            text-shadow: 0 1px 2px rgba(255, 255, 255, .95);
+        }
+
+        .target-line span {
+            color: var(--gold-deep);
+            font-weight: 700;
+        }
+
+        /* ---- celebration state ---- */
+        .celebrate .countdown,
+        .celebrate .journey { display: none; }
+
+        .finale {
+            display: none;
+            text-align: center;
+            padding: 24px 18px;
+            border-radius: var(--card-radius);
+            background: linear-gradient(150deg, rgba(255, 255, 255, .95), rgba(255, 236, 195, .85));
+            border: 1.6px solid rgba(200, 137, 31, .6);
+            box-shadow: 0 18px 44px rgba(16, 37, 107, .28);
+            backdrop-filter: blur(10px);
+        }
+
+        .celebrate .finale {
+            display: block;
+            animation: cardIn .9s var(--ease-out) both;
+        }
+
+        .finale h1 {
+            margin: 0;
+            font-size: clamp(22px, 2.9vw, 46px);
+            font-weight: 900;
+            letter-spacing: -1px;
+            background: linear-gradient(100deg, var(--navy), var(--blue), var(--gold), var(--gold-bright), var(--gold), var(--navy));
+            background-size: 260% 100%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            animation: sheen 5s linear infinite;
+        }
+
+        .finale p {
+            margin: 8px 0 0;
+            font-family: "Hind Siliguri", sans-serif;
+            font-size: clamp(12px, 1.1vw, 19px);
+            color: var(--gold-deep);
+            font-weight: 700;
+        }
+
+        /* ============ ANALOG CLOCK — bottom right corner ============ */
+        .corner-clock {
+            position: absolute;
+            z-index: 4;
+            right: 3.4%;
+            bottom: 3.6%;
+            width: clamp(70px, 8.4vw, 118px);
+            aspect-ratio: 1;
+            display: grid;
+            place-items: center;
+            animation: fadeUp 1.4s var(--ease-out) .5s both;
+        }
+
+        /* soft glass plate under the dial */
+        .corner-clock::before {
+            content: "";
+            position: absolute;
+            inset: -9%;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255, 255, 255, .82), rgba(255, 255, 255, .38) 70%, transparent 100%);
+            box-shadow: 0 12px 30px rgba(16, 37, 107, .22);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+        }
+
+        .analog {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 4px 10px rgba(16, 37, 107, .28));
+        }
+
+        .analog .face {
+            fill: rgba(255, 255, 255, .92);
+            stroke: url(#goldGrad);
+            stroke-width: 3;
+        }
+
+        .analog .inner {
+            fill: none;
+            stroke: rgba(16, 37, 107, .12);
+            stroke-width: 1;
+        }
+
+        .analog .tick { stroke: rgba(16, 37, 107, .45); stroke-width: 1.5; stroke-linecap: round; }
+        .analog .tick.major { stroke: var(--gold-deep); stroke-width: 2.8; }
+        .analog .hand { stroke: var(--navy); stroke-linecap: round; transform-origin: 50px 50px; }
+        .analog .hand.hour { stroke-width: 5.2; }
+        .analog .hand.minute { stroke-width: 3.4; }
+        .analog .hand.second { stroke: var(--red); stroke-width: 1.7; }
+        .analog .pin { fill: var(--gold); stroke: #fff; stroke-width: 1.2; }
+
+        /* ============ RESPONSIVE ============ */
+        @media (max-width: 1100px) {
+            .clock-area { width: 52%; top: 22%; }
+            .head { margin-top: .38in; }
+        }
+
+        @media (max-width: 800px) {
+            body { overflow: auto; display: block; }
+            .scene { min-height: 100vh; aspect-ratio: auto; padding: 34px 0 40px; }
+            .scene::after { background: rgba(255, 255, 255, .38); }
+            .clock-area { position: relative; left: 0; top: 0; width: 92%; margin: 0 auto; }
+            .head { margin-top: .25in; }
+            .countdown { gap: 8px; }
+            .journey { width: 100%; }
+            .corner-clock {
+                position: relative;
+                right: auto;
+                bottom: auto;
+                margin: 26px auto 0;
+                width: clamp(84px, 26vw, 130px);
+            }
+        }
+
+        @media (max-width: 520px) {
+            .countdown { grid-template-columns: repeat(2, 1fr); }
+            .unit-card { padding: 15px 6px 13px; }
+            .dial { width: clamp(84px, 30vw, 118px); }
+            .number { font-size: clamp(32px, 10.5vw, 52px); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: .001ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: .001ms !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="scene">
+
+        <div class="aura"></div>
+        <div class="dust" id="dust"></div>
+
+        <!-- shared gradients -->
+        <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+            <defs>
+                <linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#8a5d0a" />
+                    <stop offset="45%" stop-color="#c8891f" />
+                    <stop offset="100%" stop-color="#ffe6a8" />
+                </linearGradient>
+                <linearGradient id="redGrad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#b52a1c" />
+                    <stop offset="50%" stop-color="#e8412f" />
+                    <stop offset="100%" stop-color="#ffb199" />
+                </linearGradient>
+            </defs>
+        </svg>
+
+        <!-- ================= COUNTDOWN (left free zone) ================= -->
+        <section class="clock-area" id="clockArea">
+
+            <div class="head">
+                <div class="kicker">Countdown to Golden Jubilee</div>
+                <div class="kicker-bn">সুবর্ণ জয়ন্তীর প্রতীক্ষায়</div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="countdown">
+
+                <!-- DAYS -->
+                <div class="unit-card">
+                    <div class="dial">
+                        <svg class="ring" viewBox="0 0 120 120">
+                            <circle class="track" cx="60" cy="60" r="54" />
+                            <circle class="bar" id="ringDays" cx="60" cy="60" r="54" />
+                        </svg>
+                        <div class="number" id="days">00</div>
+                        <div class="icon">
+                            <svg viewBox="0 0 24 24">
+                                <rect x="3" y="4.5" width="18" height="17" rx="2" />
+                                <path d="M7 2.5v4M17 2.5v4M3 9h18" />
+                                <path d="M7 13h3M14 13h3M7 17h3" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="label">DAYS</div>
+                    <div class="bn">দিন</div>
+                </div>
+
+                <!-- HOURS -->
+                <div class="unit-card">
+                    <div class="dial">
+                        <svg class="ring" viewBox="0 0 120 120">
+                            <circle class="track" cx="60" cy="60" r="54" />
+                            <circle class="bar" id="ringHours" cx="60" cy="60" r="54" />
+                        </svg>
+                        <div class="number" id="hours">00</div>
+                        <div class="icon">
+                            <svg viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="9" />
+                                <path d="M12 12V7M12 12l3.5 2" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="label">HOURS</div>
+                    <div class="bn">ঘণ্টা</div>
+                </div>
+
+                <!-- MINUTES -->
+                <div class="unit-card">
+                    <div class="dial">
+                        <svg class="ring" viewBox="0 0 120 120">
+                            <circle class="track" cx="60" cy="60" r="54" />
+                            <circle class="bar" id="ringMinutes" cx="60" cy="60" r="54" />
+                        </svg>
+                        <div class="number" id="minutes">00</div>
+                        <div class="icon">
+                            <svg viewBox="0 0 24 24">
+                                <circle cx="12" cy="13" r="8" />
+                                <path d="M12 13l4-3" />
+                                <path d="M9 3h6M12 3v2" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="label">MINUTES</div>
+                    <div class="bn">মিনিট</div>
+                </div>
+
+                <!-- SECONDS -->
+                <div class="unit-card">
+                    <div class="dial">
+                        <svg class="ring" viewBox="0 0 120 120">
+                            <circle class="track" cx="60" cy="60" r="54" />
+                            <circle class="bar" id="ringSeconds" cx="60" cy="60" r="54" />
+                        </svg>
+                        <div class="number" id="seconds">00</div>
+                        <div class="icon">
+                            <svg viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="9" />
+                                <path d="M12 12l5-2" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="label">SECONDS</div>
+                    <div class="bn">সেকেন্ড</div>
+                </div>
+
+            </div>
+
+            <!-- journey progress -->
+            <div class="journey">
+                <div class="journey-top">
+                    <span>Journey to 01 Oct 2026</span>
+                    <span><b id="pct">0%</b> complete</span>
+                </div>
+                <div class="bar-outer">
+                    <div class="bar-inner" id="bar"></div>
+                </div>
+            </div>
+
+            <!-- shown when the countdown hits zero -->
+            <div class="finale">
+                <h1>GOLDEN JUBILEE</h1>
+                <p>শুভ সুবর্ণ জয়ন্তী — ০১ অক্টোবর ২০২৬</p>
+            </div>
+
+            <div class="ornament"></div>
+
+            <div class="target-line">লক্ষ্য <span>০১ অক্টোবর ২০২৬</span> · বাংলাদেশ সময় রাত ১২:০০</div>
+
+        </section>
+
+        <!-- ================= LIVE ANALOG CLOCK (bottom right) ================= -->
+        <div class="corner-clock">
+            <svg class="analog" viewBox="0 0 100 100" aria-hidden="true">
+                <circle class="face" cx="50" cy="50" r="45" />
+                <circle class="inner" cx="50" cy="50" r="38" />
+                <g id="ticks"></g>
+                <line class="hand hour" id="hHand" x1="50" y1="50" x2="50" y2="29" />
+                <line class="hand minute" id="mHand" x1="50" y1="50" x2="50" y2="20" />
+                <line class="hand second" id="sHand" x1="50" y1="57" x2="50" y2="17" />
+                <circle class="pin" cx="50" cy="50" r="3.2" />
+            </svg>
+        </div>
+
+    </div>
+
+    <script>
+        /* =========================================================
+           Countdown target: 01 October 2026, 00:00:00 (UTC+06:00)
+           ========================================================= */
+        const TARGET = new Date("2026-10-01T00:00:00+06:00").getTime();
+        const ORIGIN = new Date("2025-10-01T00:00:00+06:00").getTime(); // journey start
+
+        const el = (id) => document.getElementById(id);
+
+        const daysEl = el("days"), hoursEl = el("hours"), minutesEl = el("minutes"), secondsEl = el("seconds");
+        const ringDays = el("ringDays"), ringHours = el("ringHours"), ringMinutes = el("ringMinutes"), ringSeconds = el("ringSeconds");
+        const barEl = el("bar"), pctEl = el("pct"), clockArea = el("clockArea");
+
+        /* ---- ring geometry ---- */
+        const R = 54, CIRC = 2 * Math.PI * R;
+        [ringDays, ringHours, ringMinutes, ringSeconds].forEach(function (r) {
+            r.style.strokeDasharray = CIRC;
+            r.style.strokeDashoffset = CIRC;
+        });
+
+        function setRing(ring, fraction) {
+            const f = Math.max(0, Math.min(1, fraction));
+            ring.style.strokeDashoffset = CIRC * (1 - f);
+        }
+
+        /* ---- analog clock ticks ---- */
+        const ticks = el("ticks");
+        for (let i = 0; i < 60; i++) {
+            const major = i % 5 === 0;
+            const a = (i * 6) * Math.PI / 180;
+            const r1 = major ? 33 : 37, r2 = 42;
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute("class", "tick" + (major ? " major" : ""));
+            line.setAttribute("x1", 50 + r1 * Math.sin(a));
+            line.setAttribute("y1", 50 - r1 * Math.cos(a));
+            line.setAttribute("x2", 50 + r2 * Math.sin(a));
+            line.setAttribute("y2", 50 - r2 * Math.cos(a));
+            ticks.appendChild(line);
+        }
+
+        const hHand = el("hHand"), mHand = el("mHand"), sHand = el("sHand");
+
+        function drawAnalog(now) {
+            const s = now.getSeconds() + now.getMilliseconds() / 1000;
+            const m = now.getMinutes() + s / 60;
+            const h = (now.getHours() % 12) + m / 60;
+            sHand.style.transform = "rotate(" + (s * 6) + "deg)";
+            mHand.style.transform = "rotate(" + (m * 6) + "deg)";
+            hHand.style.transform = "rotate(" + (h * 30) + "deg)";
+        }
+
+        /* ---- floating gold dust ---- */
+        const dust = el("dust");
+        for (let i = 0; i < 24; i++) {
+            const p = document.createElement("i");
+            const size = 3 + Math.random() * 6;
+            p.style.left = (Math.random() * 100).toFixed(2) + "%";
+            p.style.width = p.style.height = size.toFixed(1) + "px";
+            p.style.animationDuration = (11 + Math.random() * 13).toFixed(1) + "s";
+            p.style.animationDelay = (-Math.random() * 20).toFixed(1) + "s";
+            dust.appendChild(p);
+        }
+
+        /* ---- number helpers ---- */
+        function pad(n, w) {
+            return String(n).padStart(w || 2, "0");
+        }
+
+        function updateNumber(node, value) {
+            if (node.textContent !== value) {
+                node.textContent = value;
+                node.classList.remove("change");
+                void node.offsetWidth;
+                node.classList.add("change");
+            }
+        }
+
+        /* ---- main animation loop ---- */
+        let lastSecond = -1;
+
+        function frame() {
+            const now = new Date();
+            drawAnalog(now);
+
+            const diff = TARGET - now.getTime();
+
+            if (diff <= 0) {
+                updateNumber(daysEl, "00");
+                updateNumber(hoursEl, "00");
+                updateNumber(minutesEl, "00");
+                updateNumber(secondsEl, "00");
+                clockArea.classList.add("celebrate");
+                requestAnimationFrame(frame); // keep the analog clock alive
+                return;
+            }
+
+            const totalSec = Math.floor(diff / 1000);
+            const days = Math.floor(totalSec / 86400);
+            const hours = Math.floor((totalSec % 86400) / 3600);
+            const minutes = Math.floor((totalSec % 3600) / 60);
+            const seconds = totalSec % 60;
+
+            // seconds ring sweeps smoothly (sub-second); the rest tick once a second
+            setRing(ringSeconds, (seconds * 1000 + (diff % 1000)) / 60000);
+
+            if (seconds !== lastSecond) {
+                lastSecond = seconds;
+
+                updateNumber(daysEl, pad(days, days > 99 ? 3 : 2));
+                updateNumber(hoursEl, pad(hours));
+                updateNumber(minutesEl, pad(minutes));
+                updateNumber(secondsEl, pad(seconds));
+
+                setRing(ringHours, hours / 24);
+                setRing(ringMinutes, minutes / 60);
+                setRing(ringDays, Math.min(days, 365) / 365);
+
+                const done = Math.max(0, Math.min(1, (now.getTime() - ORIGIN) / (TARGET - ORIGIN)));
+                barEl.style.width = (done * 100).toFixed(2) + "%";
+                pctEl.textContent = (done * 100).toFixed(1) + "%";
+            }
+
+            requestAnimationFrame(frame);
+        }
+
+        requestAnimationFrame(frame);
+    </script>
+
+</body>
+
+</html>

@@ -25,6 +25,7 @@ export default function DepositEntry() {
   const [cashAmount, setCashAmount] = useState('');    // ক্যাশ জমা (editable)
   const [dueAmount, setDueAmount] = useState('');      // বাকী (auto calculated)
   const [remarks, setRemarks] = useState('');
+  const [miscNote, setMiscNote] = useState('');       // "বিবিধ" বেছে নিলে তার বিবরণ
 
   // Filter state
   const [filterRickshawId, setFilterRickshawId] = useState('');
@@ -124,6 +125,12 @@ export default function DepositEntry() {
     setDueAmount(String(remaining > 0 ? remaining : 0));
   }
 
+  // জমার ধরণ বদলালে — "বিবিধ" ছাড়া অন্য কিছু হলে বিবরণের ঘরটি খালি হয়ে যায়
+  function handleParticularsChange(value) {
+    setParticulars(value);
+    if (value !== 'বিবিধ') setMiscNote('');
+  }
+
   function resetForm() {
     setRickshawId('');
     setDailyJoma('');
@@ -132,6 +139,7 @@ export default function DepositEntry() {
     setCashAmount('');
     setDueAmount('');
     setRemarks('');
+    setMiscNote('');
   }
 
   async function handleSubmit(e) {
@@ -143,6 +151,10 @@ export default function DepositEntry() {
     }
     if (cashAmount === '') {
       alert('ক্যাশ জমার পরিমাণ দিন।');
+      return;
+    }
+    if (particulars === 'বিবিধ' && !miscNote.trim()) {
+      alert('বিবিধ জমার বিবরণ লিখুন।');
       return;
     }
     // Without a driver the বাকী cannot be collected from anyone on the Due Recovery screen
@@ -164,7 +176,9 @@ export default function DepositEntry() {
           amount: Number(cashAmount),
           daily_joma_amount: dailyJoma === '' ? null : Number(dailyJoma),
           due_amount: Number(dueAmount || 0),
-          income_particulars: particulars,
+          income_particulars: particulars === 'বিবিধ'
+            ? `বিবিধ — ${miscNote.trim()}`
+            : particulars,
           remarks: remarks || null,
         }])
         .select(`*, rickshaws(registration_number, identity_no, vehicle_type), drivers(name)`);
@@ -288,12 +302,30 @@ export default function DepositEntry() {
             <label className="form-label">জমার ধরণ (Particulars)</label>
             {/* "বাকী আদায়" lives on the Due Recovery page now — keeping it here
                 too would double-count the money and never reduce the balance. */}
-            <select className="form-input" value={particulars} onChange={(e) => setParticulars(e.target.value)} required>
+            <select className="form-input" value={particulars} onChange={(e) => handleParticularsChange(e.target.value)} required>
               <option value="দৈনিক ভাড়ার জমা">দৈনিক ভাড়ার জমা</option>
-              <option value="পুরাতন পার্টস বিক্রির অর্থ জমা">পুরাতন পার্টস বিক্রির অর্থ জমা</option>
               <option value="বিবিধ">বিবিধ</option>
             </select>
           </div>
+
+          {/* 4b. "বিবিধ" বেছে নিলে বিবরণের ঘরটি নিজে থেকেই চলে আসে */}
+          {particulars === 'বিবিধ' && (
+            <div className="form-group !mb-0">
+              <label className="form-label">বিবিধের বিবরণ (কী বাবদ জমা)</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  className="form-input pl-11"
+                  value={miscNote}
+                  onChange={(e) => setMiscNote(e.target.value)}
+                  placeholder="যেমনঃ পুরাতন পার্টস বিক্রির অর্থ"
+                  autoFocus
+                  required
+                />
+                <MessageSquare size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-amber-400/60 pointer-events-none" />
+              </div>
+            </div>
+          )}
 
           {/* 5. Cash deposit (editable, pre-filled) */}
           <div className="form-group !mb-0">

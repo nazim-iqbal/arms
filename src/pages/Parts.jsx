@@ -1,8 +1,37 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Wrench, ShoppingCart, Tag, Trash2, CarFront } from 'lucide-react';
+import { Wrench, ShoppingCart, Tag, Trash2, CarFront, MessageSquare } from 'lucide-react';
 import { today, formatDate, bn } from '../lib/date';
+
+// যন্ত্রাংশের তালিকা — ক্রয় ও বিক্রয় দুই ট্যাবেই একই
+const PART_NAMES = [
+  'মোটর (Motor)',
+  'ব্যাটারি (Battery)',
+  'কন্ট্রোলার (Controller)',
+  'চার্জার (Charger)',
+  'এক্সিলারেটর (Throttle)',
+  'ব্রেক (Brake)',
+  'ব্রেক শু (Brake Shoe)',
+  'ওয়্যারিং (Wiring)',
+  'টায়ার (Tyre)',
+  'টিউব (Tube)',
+  'রিম (Rim)',
+  'ফর্ক (Fork)',
+  'হ্যান্ডেল (Handle)',
+  'সুইচ (Switch)',
+  'হর্ন (Horn)',
+  'হেডলাইট (Headlight)',
+  'ইন্ডিকেটর (Indicator)',
+  'স্প্রিং (Spring)',
+  'শক অবজাবার (Shock Absorber)',
+  'ডিফারেন্জিয়াল (Differential)',
+  'চেচিস (Chassis)',
+  'সিট (Seat)',
+  'বিবিধ',
+];
+
+const MISC_PART = 'বিবিধ';
 
 export default function Parts() {
   // Only an admin may delete; everyone else can add and edit
@@ -17,6 +46,7 @@ export default function Parts() {
   const [rickshawId, setRickshawId] = useState('');
   const [type, setType] = useState('purchase');
   const [partName, setPartName] = useState('');
+  const [partNote, setPartNote] = useState('');   // "বিবিধ" হলে তার বিস্তারিত
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(today());
 
@@ -45,9 +75,19 @@ export default function Parts() {
     }
   }
 
+  // যন্ত্রাংশ বদলালে — "বিবিধ" ছাড়া অন্য কিছু হলে বিস্তারিতের ঘরটি খালি হয়ে যায়
+  function handlePartNameChange(value) {
+    setPartName(value);
+    if (value !== MISC_PART) setPartNote('');
+  }
+
   async function addTransaction(e) {
     e.preventDefault();
     if (!partName || !amount) return;
+    if (partName === MISC_PART && !partNote.trim()) {
+      alert('বিবিধ যন্ত্রাংশের বিস্তারিত লিখুন।');
+      return;
+    }
 
     try {
       const { data, error } = await supabase
@@ -55,7 +95,7 @@ export default function Parts() {
         .insert([{ 
           rickshaw_id: rickshawId || null, 
           transaction_type: type, 
-          part_name: partName, 
+          part_name: partName === MISC_PART ? `বিবিধ — ${partNote.trim()}` : partName, 
           amount: parseFloat(amount), 
           transaction_date: date 
         }])
@@ -66,6 +106,7 @@ export default function Parts() {
       
       // Reset form
       setPartName('');
+      setPartNote('');
       setAmount('');
     } catch (error) {
       alert('Error adding part transaction: ' + error.message);
@@ -126,8 +167,37 @@ export default function Parts() {
           
           <div>
             <label className="form-label">যন্ত্রাংশের নাম</label>
-            <input type="text" className="form-input" value={partName} onChange={(e) => setPartName(e.target.value)} placeholder="e.g. ব্যাটারি, চাকা" required />
+            <select
+              className="form-input"
+              value={partName}
+              onChange={(e) => handlePartNameChange(e.target.value)}
+              required
+            >
+              <option value="">-- যন্ত্রাংশ নির্বাচন করুন --</option>
+              {PART_NAMES.map((n) => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
           </div>
+
+          {/* "বিবিধ" বেছে নিলে বিস্তারিত লেখার ঘরটি নিজে থেকেই চলে আসে */}
+          {partName === MISC_PART && (
+            <div>
+              <label className="form-label">বিবিধ যন্ত্রাংশের বিস্তারিত</label>
+              <div className="relative">
+                <textarea
+                  className="form-input pl-11 resize-y min-h-[52px]"
+                  rows={2}
+                  value={partNote}
+                  onChange={(e) => setPartNote(e.target.value)}
+                  placeholder="যেমনঃ চাকার বেয়ারিং, স্পোক"
+                  autoFocus
+                  required
+                />
+                <MessageSquare size={18} className="absolute left-3.5 top-3.5 text-white/30 pointer-events-none" />
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>

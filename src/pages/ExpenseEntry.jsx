@@ -1,8 +1,30 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { ArrowDownCircle, Trash2, Plus, Receipt } from 'lucide-react';
+import { ArrowDownCircle, Trash2, Plus, Receipt, MessageSquare } from 'lucide-react';
 import { today, formatDate, bn } from '../lib/date';
+
+// খরচের ধরণ — তালিকার ক্রম অপরিবর্তিত রাখা হয়েছে
+const EXPENSE_TYPES = [
+  'চার্জিং বিল',
+  'ব্যাটারি-পানি ক্রয়',
+  'বিদ্যুতের মিটার রিচার্জ/বিল পরিশোধ',
+  'লিক সারানো',
+  'মেরামত',
+  'জরিমানা',
+  'বিবিধ',
+];
+
+// এই ধরণগুলো নিজে থেকে কিছু বলে না, তাই বেছে নিলেই বিস্তারিতের ঘর চলে আসে
+const DETAIL_LABELS = {
+  'মেরামত': 'মেরামতের বিস্তারিত (Comment)',
+  'বিবিধ': 'বিবিধের বিস্তারিত (Comment)',
+};
+
+const DETAIL_PLACEHOLDERS = {
+  'মেরামত': 'যেমনঃ পিছনের চাকার বেয়ারিং ও ব্রেক শু বদলানো হয়েছে',
+  'বিবিধ': 'যেমনঃ টায়ার বদলানো',
+};
 
 export default function ExpenseEntry() {
   // Only an admin may delete; everyone else can add and edit
@@ -19,6 +41,7 @@ export default function ExpenseEntry() {
   const [date, setDate] = useState(today());
   const [amount, setAmount] = useState('');
   const [particulars, setParticulars] = useState('');
+  const [detailNote, setDetailNote] = useState('');   // "মেরামত"/"বিবিধ" হলে তার বিস্তারিত
 
   useEffect(() => {
     fetchData();
@@ -55,11 +78,26 @@ export default function ExpenseEntry() {
     setDate(today());
     setAmount('');
     setParticulars('');
+    setDetailNote('');
+  }
+
+  // ধরণ বদলালে — বিস্তারিত লাগে না এমন কিছু হলে ঘরটি খালি হয়ে যায়
+  function handleParticularsChange(value) {
+    setParticulars(value);
+    if (!DETAIL_LABELS[value]) setDetailNote('');
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
     if (!amount) return;
+    if (!particulars) {
+      alert('খরচের ধরণ নির্বাচন করুন।');
+      return;
+    }
+    if (DETAIL_LABELS[particulars] && !detailNote.trim()) {
+      alert(`${particulars} বাবদ খরচের বিস্তারিত লিখুন।`);
+      return;
+    }
 
     try {
       setSaving(true);
@@ -69,7 +107,9 @@ export default function ExpenseEntry() {
           rickshaw_id: rickshawId || null,
           date,
           amount: Number(amount),
-          expense_particulars: particulars,
+          expense_particulars: DETAIL_LABELS[particulars]
+            ? `${particulars} — ${detailNote.trim()}`
+            : particulars,
         }])
         .select(`*, rickshaws(registration_number, identity_no, vehicle_type)`);
 
@@ -171,15 +211,37 @@ export default function ExpenseEntry() {
 
           <div className="form-group !mb-0 md:col-span-2 lg:col-span-3">
             <label className="form-label">খরচের বিবরণ (Particulars)</label>
-            <input
-              type="text"
+            <select
               className="form-input"
               value={particulars}
-              onChange={(e) => setParticulars(e.target.value)}
-              placeholder="যেমনঃ টায়ার বদলানো"
+              onChange={(e) => handleParticularsChange(e.target.value)}
               required
-            />
+            >
+              <option value="">-- খরচের ধরণ নির্বাচন করুন --</option>
+              {EXPENSE_TYPES.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
           </div>
+
+          {/* "মেরামত"/"বিবিধ" বেছে নিলে বিস্তারিত লেখার ঘরটি নিজে থেকেই চলে আসে */}
+          {DETAIL_LABELS[particulars] && (
+            <div className="form-group !mb-0 md:col-span-2 lg:col-span-3">
+              <label className="form-label">{DETAIL_LABELS[particulars]}</label>
+              <div className="relative">
+                <textarea
+                  className="form-input pl-11 resize-y min-h-[52px]"
+                  rows={2}
+                  value={detailNote}
+                  onChange={(e) => setDetailNote(e.target.value)}
+                  placeholder={DETAIL_PLACEHOLDERS[particulars]}
+                  autoFocus
+                  required
+                />
+                <MessageSquare size={18} className="absolute left-3.5 top-3.5 text-red-400/60 pointer-events-none" />
+              </div>
+            </div>
+          )}
 
           <div className="md:col-span-2 lg:col-span-3 grid grid-cols-2 sm:flex sm:justify-end gap-2.5 mt-1">
             <button type="button" onClick={resetForm} className="btn btn-secondary sm:px-8">রিসেট</button>
