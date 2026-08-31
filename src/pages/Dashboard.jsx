@@ -1,13 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { today, daysAgo, formatDate, bn } from '../lib/date';
+import {
+  today, daysAgo, formatDate, bn,
+  monthStart, monthEnd, addMonths, eachDay, monthLabel, weekdayShort,
+} from '../lib/date';
 import { buildDueBalances, listDebtors, orphanDue } from '../lib/due';
 import { useBranch } from '../contexts/BranchContext';
+import { useAuth } from '../contexts/AuthContext';
 import {
   CarFront, Users, DollarSign, TrendingUp, TrendingDown, Activity,
   X, ChevronRight, RefreshCw, Loader2, AlertTriangle, Wallet, Hash, Phone, Menu, User, HandCoins,
-  Search, CalendarRange, Building2, ArrowUpCircle, ArrowDownCircle
+  Search, CalendarRange, Building2, ArrowUpCircle, ArrowDownCircle, Table2, LayoutGrid,
+  ChevronLeft, CalendarDays
 } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
@@ -47,6 +52,190 @@ const StatCard = ({ title, value, subValue, icon: Icon, gradient, onClick }) => 
     <ChevronRight className="w-4 h-4 md:w-5 md:h-5 opacity-70 shrink-0" />
   </button>
 );
+
+/* ------------------------------------------------------------------ */
+/* থিম-২ — the same four money figures, but one row per day of a       */
+/* month, so a whole month reads in a single glance instead of one     */
+/* time window at a time. ← → walk back and forth through the months.  */
+/* ------------------------------------------------------------------ */
+const MoneyTile = ({ label, value, tone }) => (
+  <div className={`rounded-xl border px-3 py-2.5 md:px-4 md:py-3 ${tone}`}>
+    <div className="text-[10px] md:text-xs uppercase tracking-wider opacity-70 font-semibold truncate">{label}</div>
+    <div className="text-lg md:text-2xl font-bold tabular-nums mt-0.5 truncate">৳ {value}</div>
+  </div>
+);
+
+const MonthlyTable = ({ rows, loading, error, onRetry, anchor, onPrev, onNext, canGoNext }) => {
+  const totals = rows.reduce(
+    (t, r) => ({ income: t.income + r.income, expense: t.expense + r.expense, due: t.due + r.due }),
+    { income: 0, expense: 0, due: 0 }
+  );
+  const totalNet = totals.income - totals.expense;
+
+  // Wide enough that the numbers stay full-size; the table scrolls sideways
+  // on a phone rather than shrinking to unreadable.
+  const num = 'px-3 py-3 md:px-5 md:py-4 text-right tabular-nums whitespace-nowrap text-base md:text-xl font-semibold';
+  const head = 'px-3 py-3 md:px-5 md:py-3.5 text-right whitespace-nowrap text-xs md:text-sm font-bold uppercase tracking-wider';
+
+  return (
+    <div className="flex flex-col gap-3 md:gap-4">
+
+      {/* Month stepper — the next arrow stops at the running month, since
+          there is nothing yet to show beyond it. */}
+      <div className="glass-panel flex items-center justify-between gap-2 p-2 md:p-2.5">
+        <button
+          type="button"
+          onClick={onPrev}
+          aria-label="আগের মাস"
+          className="p-2.5 md:p-3 rounded-xl bg-white/5 border border-white/10 text-white/70
+                     md:hover:bg-white/10 md:hover:text-white active:scale-95 transition-all"
+        >
+          <ChevronLeft size={20} />
+        </button>
+
+        <div className="flex items-center gap-2 min-w-0">
+          <CalendarDays size={18} className="text-[#00f2fe] shrink-0 hidden sm:block" />
+          <span className="text-lg md:text-2xl font-bold text-white truncate">{monthLabel(anchor)}</span>
+        </div>
+
+        <button
+          type="button"
+          onClick={onNext}
+          disabled={!canGoNext}
+          aria-label="পরের মাস"
+          className="p-2.5 md:p-3 rounded-xl bg-white/5 border border-white/10 text-white/70
+                     md:hover:bg-white/10 md:hover:text-white active:scale-95 transition-all
+                     disabled:opacity-25 disabled:cursor-not-allowed disabled:active:scale-100"
+        >
+          <ChevronRight size={20} />
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="glass-panel flex flex-col items-center justify-center gap-3 py-20 text-white/50">
+          <Loader2 size={28} className="animate-spin text-[#00f2fe]" />
+          <span className="text-sm">মাসের হিসাব লোড হচ্ছে...</span>
+        </div>
+      ) : error ? (
+        <div className="glass-panel flex flex-col items-center justify-center gap-3 py-16 text-center">
+          <AlertTriangle size={28} className="text-amber-400" />
+          <p className="text-white/70 text-sm">{error}</p>
+          <button onClick={onRetry} className="btn btn-secondary mt-1">আবার চেষ্টা করুন</button>
+        </div>
+      ) : rows.length === 0 ? (
+        <div className="glass-panel py-16 text-center text-white/50">এই মাসের কোনো তথ্য নেই।</div>
+      ) : (
+        <>
+          {/* The month at a glance, before the day-by-day breakdown */}
+          <div className="grid grid-cols-2 xl:grid-cols-4 gap-2 md:gap-3">
+            <MoneyTile label="মোট ইনকাম" value={bn(totals.income)} tone="bg-[#10B981]/10 border-[#10B981]/30 text-[#10B981]" />
+            <MoneyTile label="মোট খরচ" value={bn(totals.expense)} tone="bg-rose-500/10 border-rose-500/30 text-rose-400" />
+            <MoneyTile
+              label="নিট প্রফিট"
+              value={bn(totalNet)}
+              tone={totalNet < 0
+                ? 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+                : 'bg-[#3B82F6]/10 border-[#3B82F6]/30 text-[#60A5FA]'}
+            />
+            <MoneyTile label="মোট বাকী" value={bn(totals.due)} tone="bg-amber-500/10 border-amber-500/30 text-amber-400" />
+          </div>
+
+          <div className="glass-panel overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[680px] border-collapse">
+                <thead>
+                  <tr className="bg-gradient-to-r from-[#00f2fe]/15 via-[#4facfe]/10 to-transparent
+                                 border-b-2 border-[#00f2fe]/30 text-white/75">
+                    <th className="px-3 py-3 md:px-5 md:py-3.5 text-left text-xs md:text-sm font-bold uppercase tracking-wider">
+                      তারিখ
+                    </th>
+                    <th className={`${head} text-[#10B981]`}>মোট ইনকাম</th>
+                    <th className={`${head} text-rose-400`}>মোট খরচ</th>
+                    <th className={`${head} text-[#60A5FA]`}>নিট প্রফিট</th>
+                    <th className={`${head} text-amber-400`}>বাকী</th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-white/5">
+                  {rows.map((r) => {
+                    const net = r.income - r.expense;
+                    const isToday = r.date === today();
+                    // A day with no entries reads better as one quiet line than
+                    // as four zeros competing with the days that carry money.
+                    const empty = !r.income && !r.expense && !r.due;
+                    return (
+                      <tr
+                        key={r.date}
+                        className={`transition-colors ${
+                          isToday
+                            ? 'bg-[#00f2fe]/10'
+                            : 'even:bg-white/[0.02] md:hover:bg-white/[0.06]'
+                        }`}
+                      >
+                        <td className="px-3 py-3 md:px-5 md:py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2.5">
+                            <span
+                              className={`flex items-center justify-center w-9 h-9 md:w-11 md:h-11 rounded-xl shrink-0
+                                          text-lg md:text-2xl font-bold tabular-nums ${
+                                isToday
+                                  ? 'bg-[#00f2fe] text-[#071026]'
+                                  : 'bg-white/5 text-white/85'
+                              }`}
+                            >
+                              {bn(Number(r.date.slice(8, 10)))}
+                            </span>
+                            <span className="flex flex-col leading-tight">
+                              <span className="text-sm md:text-base text-white/70 font-semibold">{weekdayShort(r.date)}</span>
+                              {isToday && <span className="text-[11px] md:text-xs text-[#00f2fe] font-bold">আজ</span>}
+                            </span>
+                          </div>
+                        </td>
+
+                        {empty ? (
+                          <td className="px-3 py-3 md:px-5 md:py-4 text-center text-white/25 text-sm md:text-base" colSpan={4}>
+                            এই দিনের কোনো এন্ট্রি নেই
+                          </td>
+                        ) : (
+                          <>
+                            <td className={`${num} text-[#10B981]`}>৳ {bn(r.income)}</td>
+                            <td className={`${num} ${r.expense ? 'text-rose-400' : 'text-white/25'}`}>
+                              {r.expense ? `৳ ${bn(r.expense)}` : '—'}
+                            </td>
+                            <td className={`${num} ${net < 0 ? 'text-rose-400' : 'text-[#60A5FA]'}`}>৳ {bn(net)}</td>
+                            <td className={`${num} ${r.due ? 'text-amber-400' : 'text-white/25'}`}>
+                              {r.due ? `৳ ${bn(r.due)}` : '—'}
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+
+                <tfoot>
+                  <tr className="bg-gradient-to-r from-[#00f2fe]/20 to-transparent border-t-2 border-[#00f2fe]/40">
+                    <td className="px-3 py-3.5 md:px-5 md:py-4 text-left whitespace-nowrap text-base md:text-xl font-bold text-white">
+                      মাসের মোট
+                    </td>
+                    <td className={`${num} !font-bold text-[#10B981]`}>৳ {bn(totals.income)}</td>
+                    <td className={`${num} !font-bold text-rose-400`}>৳ {bn(totals.expense)}</td>
+                    <td className={`${num} !font-bold ${totalNet < 0 ? 'text-rose-400' : 'text-[#60A5FA]'}`}>৳ {bn(totalNet)}</td>
+                    <td className={`${num} !font-bold text-amber-400`}>৳ {bn(totals.due)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            <p className="px-3 md:px-5 py-3 text-xs md:text-sm text-white/45 border-t border-white/10">
+              ইনকাম = দৈনিক জমা + বাকী আদায় · বাকী = ঐ দিনে নতুন জমা হওয়া বাকীর পরিমাণ
+              <span className="md:hidden"> · টেবিলটি পাশে স্ক্রল করুন</span>
+            </p>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
 
 /* ------------------------------------------------------------------ */
 /* Report container: bottom sheet on phones, centred dialog on desktop */
@@ -188,6 +377,7 @@ const REPORTS = {
 export default function Dashboard() {
   // Every figure on this screen belongs to the শাখা chosen in the header
   const { activeBranchId, scopeQuery, activeBranch, isAllBranches } = useBranch();
+  const { userRole } = useAuth();
 
   const [stats, setStats] = useState({
     totalRickshaws: 0,
@@ -211,6 +401,16 @@ export default function Dashboard() {
     ? { key: 'custom', label: 'কাস্টম', from: customRange.from, to: customRange.to }
     : resolveRange(rangeKey);
 
+  // থিম-২: the running month broken down day by day. Loaded on its own
+  // because it ignores the time-window selector entirely.
+  const [monthlyView, setMonthlyView] = useState(false);
+  // The 1st of the month on screen; ← → walk it a month at a time
+  const [monthAnchor, setMonthAnchor] = useState(() => monthStart(today()));
+  const [monthly, setMonthly] = useState({ rows: [], loading: false, error: '' });
+
+  // Nothing has happened past the running month, so the forward arrow stops there
+  const canGoNextMonth = monthAnchor < monthStart(today());
+
   // Report sheet state
   const [reportKey, setReportKey] = useState(null);
   const [reportData, setReportData] = useState(null);
@@ -223,6 +423,53 @@ export default function Dashboard() {
     fetchDashboardData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rangeKey, customRange, activeBranchId]);
+
+  useEffect(() => {
+    if (monthlyView) fetchMonthly();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [monthlyView, activeBranchId, monthAnchor]);
+
+  /**
+   * One bucket per day of the month on screen. A finished month runs to its
+   * last day; the running one stops at today, since the rest has not happened.
+   * Deliberately mirrors the cards: ইনকাম counts the deposits plus the বাকী
+   * actually recovered that day, and বাকী is the new debt raised that day
+   * rather than the running balance, which only means anything as one figure.
+   */
+  async function fetchMonthly() {
+    const from = monthAnchor;
+    const last = monthEnd(monthAnchor);
+    const to = last > today() ? today() : last;
+    try {
+      setMonthly((m) => ({ ...m, loading: true, error: '' }));
+
+      const [iRes, eRes, recRes] = await Promise.all([
+        scopeQuery(supabase.from('daily_incomes').select('date, amount, due_amount')).gte('date', from).lte('date', to),
+        scopeQuery(supabase.from('daily_expenses').select('date, amount')).gte('date', from).lte('date', to),
+        scopeQuery(supabase.from('due_recoveries').select('recovery_date, amount')).gte('recovery_date', from).lte('recovery_date', to),
+      ]);
+      if (iRes.error) throw iRes.error;
+      if (eRes.error) throw eRes.error;
+      if (recRes.error) throw recRes.error;
+
+      const byDate = {};
+      const bucket = (d) => (byDate[d] ||= { date: d, income: 0, expense: 0, due: 0 });
+
+      for (const r of iRes.data || []) {
+        const b = bucket(r.date);
+        b.income += Number(r.amount || 0);
+        b.due += Number(r.due_amount || 0);
+      }
+      for (const r of eRes.data || []) bucket(r.date).expense += Number(r.amount || 0);
+      for (const r of recRes.data || []) bucket(r.recovery_date).income += Number(r.amount || 0);
+
+      // Every day gets a row, entries or not, so the month reads as a calendar
+      const rows = eachDay(from, to).map((d) => byDate[d] || { date: d, income: 0, expense: 0, due: 0 });
+      setMonthly({ rows, loading: false, error: '' });
+    } catch (error) {
+      setMonthly({ rows: [], loading: false, error: error.message });
+    }
+  }
 
   function applyCustomRange() {
     const { from, to } = customDraft;
@@ -808,13 +1055,30 @@ export default function Dashboard() {
           <Activity className="w-5 h-5 md:w-8 md:h-8 shrink-0" />
           <span className="truncate">আজকের ওভারভিউ</span>
         </h2>
-        <button
-          onClick={fetchDashboardData}
-          className="p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors shrink-0"
-          aria-label="রিফ্রেশ"
-        >
-          <RefreshCw size={18} />
-        </button>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {/* থিম-২: swaps the cards for the running month, day by day */}
+          <button
+            type="button"
+            onClick={() => setMonthlyView(!monthlyView)}
+            aria-pressed={monthlyView}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-2 md:px-3.5 rounded-lg border text-xs md:text-sm font-semibold transition-colors ${
+              monthlyView
+                ? 'bg-[#00f2fe]/20 border-[#00f2fe]/50 text-[#00f2fe]'
+                : 'bg-white/5 border-white/10 text-white/65 md:hover:bg-white/10 md:hover:text-white'
+            }`}
+          >
+            {monthlyView ? <LayoutGrid size={15} /> : <Table2 size={15} />}
+            {monthlyView ? 'কার্ড ভিউ' : 'থিম-২'}
+          </button>
+
+          <button
+            onClick={monthlyView ? fetchMonthly : fetchDashboardData}
+            className="p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors shrink-0"
+            aria-label="রিফ্রেশ"
+          >
+            <RefreshCw size={18} />
+          </button>
+        </div>
       </div>
 
       {/* The three entry forms — big tap targets so a phone needs no sidebar */}
@@ -835,148 +1099,178 @@ export default function Dashboard() {
         ))}
       </nav>
 
-      {/* Time-window selector — scrolls sideways on narrow phones */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-3 px-3 sm:mx-0 sm:px-0 sm:flex-wrap">
-        {RANGES.map((r) => (
+      {/* The window picker drives the cards only — থিম-২ is always the
+          running month, so offering a window next to it would mislead. */}
+      {!monthlyView && (
+        <>
+        {/* Time-window selector — scrolls sideways on narrow phones */}
+        <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-3 px-3 sm:mx-0 sm:px-0 sm:flex-wrap">
+          {RANGES.map((r) => (
+            <button
+              key={r.key}
+              type="button"
+              onClick={() => setRangeKey(r.key)}
+              className={`shrink-0 px-3.5 py-2 rounded-xl text-sm font-semibold border transition-colors ${
+                rangeKey === r.key
+                  ? 'bg-[#00f2fe]/20 border-[#00f2fe]/50 text-[#00f2fe]'
+                  : 'bg-white/5 border-white/10 text-white/60 md:hover:bg-white/10 md:hover:text-white/90'
+              }`}
+            >
+              {r.label}
+            </button>
+          ))}
+
           <button
-            key={r.key}
             type="button"
-            onClick={() => setRangeKey(r.key)}
-            className={`shrink-0 px-3.5 py-2 rounded-xl text-sm font-semibold border transition-colors ${
-              rangeKey === r.key
+            onClick={() => setRangeKey('custom')}
+            className={`shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold border transition-colors ${
+              rangeKey === 'custom'
                 ? 'bg-[#00f2fe]/20 border-[#00f2fe]/50 text-[#00f2fe]'
                 : 'bg-white/5 border-white/10 text-white/60 md:hover:bg-white/10 md:hover:text-white/90'
             }`}
           >
-            {r.label}
+            <CalendarRange size={15} /> কাস্টম
           </button>
-        ))}
+        </div>
 
-        <button
-          type="button"
-          onClick={() => setRangeKey('custom')}
-          className={`shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold border transition-colors ${
-            rangeKey === 'custom'
-              ? 'bg-[#00f2fe]/20 border-[#00f2fe]/50 text-[#00f2fe]'
-              : 'bg-white/5 border-white/10 text-white/60 md:hover:bg-white/10 md:hover:text-white/90'
-          }`}
-        >
-          <CalendarRange size={15} /> কাস্টম
-        </button>
-      </div>
+        {/* From / To search — only shown while the কাস্টম window is selected */}
+        {rangeKey === 'custom' && (
+          <div className="glass-panel p-3 mt-2 flex flex-col sm:flex-row sm:items-end gap-2.5">
+            <div className="flex-1 min-w-0">
+              <label className="form-label">ফ্রম ডেট (From)</label>
+              <input
+                type="date"
+                className="form-input"
+                value={customDraft.from}
+                max={customDraft.to || undefined}
+                onChange={(e) => setCustomDraft({ ...customDraft, from: e.target.value })}
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <label className="form-label">টু ডেট (To)</label>
+              <input
+                type="date"
+                className="form-input"
+                value={customDraft.to}
+                min={customDraft.from || undefined}
+                onChange={(e) => setCustomDraft({ ...customDraft, to: e.target.value })}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={applyCustomRange}
+              className="btn btn-primary sm:px-8 shrink-0"
+            >
+              <Search size={16} /> সার্চ করুন
+            </button>
+          </div>
+        )}
+        </>
+      )}
 
-      {/* From / To search — only shown while the কাস্টম window is selected */}
-      {rangeKey === 'custom' && (
-        <div className="glass-panel p-3 mt-2 flex flex-col sm:flex-row sm:items-end gap-2.5">
-          <div className="flex-1 min-w-0">
-            <label className="form-label">ফ্রম ডেট (From)</label>
-            <input
-              type="date"
-              className="form-input"
-              value={customDraft.from}
-              max={customDraft.to || undefined}
-              onChange={(e) => setCustomDraft({ ...customDraft, from: e.target.value })}
-            />
-          </div>
-          <div className="flex-1 min-w-0">
-            <label className="form-label">টু ডেট (To)</label>
-            <input
-              type="date"
-              className="form-input"
-              value={customDraft.to}
-              min={customDraft.from || undefined}
-              onChange={(e) => setCustomDraft({ ...customDraft, to: e.target.value })}
-            />
-          </div>
-          <button
-            type="button"
-            onClick={applyCustomRange}
-            className="btn btn-primary sm:px-8 shrink-0"
-          >
-            <Search size={16} /> সার্চ করুন
-          </button>
+      {/* Which শাখা these figures belong to — an entry-only user has just
+          the one, so the line is left off for them. */}
+      {userRole !== 'user' && (
+        <div className="flex items-center gap-2 mt-3">
+          <Building2 size={15} className="text-violet-400 shrink-0" />
+          <span className="text-sm md:text-base font-bold text-violet-200">
+            {isAllBranches ? 'সকল শাখার সম্মিলিত হিসাব' : activeBranch ? `${activeBranch.name} শাখা` : 'শাখা নির্ধারিত নয়'}
+          </span>
         </div>
       )}
 
-      {/* Which শাখা these figures belong to */}
-      <div className="flex items-center gap-2 mt-3">
-        <Building2 size={15} className="text-violet-400 shrink-0" />
-        <span className="text-sm md:text-base font-bold text-violet-200">
-          {isAllBranches ? 'সকল শাখার সম্মিলিত হিসাব' : activeBranch ? `${activeBranch.name} শাখা` : 'শাখা নির্ধারিত নয়'}
-        </span>
-      </div>
-
       <p className="text-white/45 text-xs md:text-sm mt-1 mb-3 md:mb-4">
-        {range.all
-          ? 'শুরু থেকে আজ পর্যন্ত সকল লেনদেন'
-          : range.from === range.to
-            ? formatDate(range.from)
-            : `${formatDate(range.from)} — ${formatDate(range.to)}`}
-        {' · '}যেকোনো কার্ডে ট্যাপ করলে বিস্তারিত রিপোর্ট দেখা যাবে।
+        {monthlyView ? (
+          <>
+            মাসের দৈনিক হিসাব · ← → দিয়ে আগের বা পরের মাসে যান।
+          </>
+        ) : (
+          <>
+            {range.all
+              ? 'শুরু থেকে আজ পর্যন্ত সকল লেনদেন'
+              : range.from === range.to
+                ? formatDate(range.from)
+                : `${formatDate(range.from)} — ${formatDate(range.to)}`}
+            {' · '}যেকোনো কার্ডে ট্যাপ করলে বিস্তারিত রিপোর্ট দেখা যাবে।
+          </>
+        )}
       </p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5 md:gap-5">
-        <StatCard
-          title={`মোট ইনকাম (${range.label})`}
-          value={`৳ ${bn(stats.income)}`}
-          subValue={
-            [
-              stats.recovered > 0 ? `আদায় ৳ ${bn(stats.recovered)}` : null,
-              stats.newDue > 0 ? `নতুন বাকী ৳ ${bn(stats.newDue)}` : null,
-            ].filter(Boolean).join(' · ') || null
-          }
-          icon={TrendingUp}
-          gradient="linear-gradient(135deg, #10B981 0%, #059669 100%)"
-          onClick={() => openReport('income')}
+      {monthlyView ? (
+        <MonthlyTable
+          rows={monthly.rows}
+          loading={monthly.loading}
+          error={monthly.error}
+          onRetry={fetchMonthly}
+          anchor={monthAnchor}
+          onPrev={() => setMonthAnchor(addMonths(monthAnchor, -1))}
+          onNext={() => canGoNextMonth && setMonthAnchor(addMonths(monthAnchor, 1))}
+          canGoNext={canGoNextMonth}
         />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5 md:gap-5">
+          <StatCard
+            title={`মোট ইনকাম (${range.label})`}
+            value={`৳ ${bn(stats.income)}`}
+            subValue={
+              [
+                stats.recovered > 0 ? `আদায় ৳ ${bn(stats.recovered)}` : null,
+                stats.newDue > 0 ? `নতুন বাকী ৳ ${bn(stats.newDue)}` : null,
+              ].filter(Boolean).join(' · ') || null
+            }
+            icon={TrendingUp}
+            gradient="linear-gradient(135deg, #10B981 0%, #059669 100%)"
+            onClick={() => openReport('income')}
+          />
 
-        <StatCard
-          title={`মোট খরচ (${range.label})`}
-          value={`৳ ${bn(stats.expense)}`}
-          icon={TrendingDown}
-          gradient="linear-gradient(135deg, #EF4444 0%, #DC2626 100%)"
-          onClick={() => openReport('expense')}
-        />
+          <StatCard
+            title={`মোট খরচ (${range.label})`}
+            value={`৳ ${bn(stats.expense)}`}
+            icon={TrendingDown}
+            gradient="linear-gradient(135deg, #EF4444 0%, #DC2626 100%)"
+            onClick={() => openReport('expense')}
+          />
 
-        <StatCard
-          title={`নিট প্রফিট (${range.label})`}
-          value={`৳ ${bn(net)}`}
-          icon={DollarSign}
-          gradient="linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)"
-          onClick={() => openReport('profit')}
-        />
+          <StatCard
+            title={`নিট প্রফিট (${range.label})`}
+            value={`৳ ${bn(net)}`}
+            icon={DollarSign}
+            gradient="linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)"
+            onClick={() => openReport('profit')}
+          />
 
-        {/* A balance, not a period total — the window only drives the sub-line */}
-        <StatCard
-          title="মোট বাকী (চলমান)"
-          value={`৳ ${bn(stats.outstandingDue)}`}
-          subValue={
-            stats.debtorCount > 0
-              ? `${bn(stats.debtorCount)} জনের কাছে · ${range.label} আদায় ৳ ${bn(stats.recovered)}`
-              : 'কারো কোনো বাকী নেই'
-          }
-          icon={HandCoins}
-          gradient="linear-gradient(135deg, #F59E0B 0%, #B45309 100%)"
-          onClick={() => openReport('due')}
-        />
+          {/* A balance, not a period total — the window only drives the sub-line */}
+          <StatCard
+            title="মোট বাকী (চলমান)"
+            value={`৳ ${bn(stats.outstandingDue)}`}
+            subValue={
+              stats.debtorCount > 0
+                ? `${bn(stats.debtorCount)} জনের কাছে · ${range.label} আদায় ৳ ${bn(stats.recovered)}`
+                : 'কারো কোনো বাকী নেই'
+            }
+            icon={HandCoins}
+            gradient="linear-gradient(135deg, #F59E0B 0%, #B45309 100%)"
+            onClick={() => openReport('due')}
+          />
 
-        <StatCard
-          title="মোট রিক্সা/অটো"
-          value={bn(stats.totalRickshaws)}
-          subValue={`${bn(stats.activeRickshaws)} টি সচল`}
-          icon={CarFront}
-          gradient="linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)"
-          onClick={() => openReport('vehicles')}
-        />
+          <StatCard
+            title="মোট রিক্সা/অটো"
+            value={bn(stats.totalRickshaws)}
+            subValue={`${bn(stats.activeRickshaws)} টি সচল`}
+            icon={CarFront}
+            gradient="linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)"
+            onClick={() => openReport('vehicles')}
+          />
 
-        <StatCard
-          title="মোট ড্রাইভার"
-          value={bn(stats.totalDrivers)}
-          icon={Users}
-          gradient="linear-gradient(135deg, #64748B 0%, #475569 100%)"
-          onClick={() => openReport('drivers')}
-        />
-      </div>
+          <StatCard
+            title="মোট ড্রাইভার"
+            value={bn(stats.totalDrivers)}
+            icon={Users}
+            gradient="linear-gradient(135deg, #64748B 0%, #475569 100%)"
+            onClick={() => openReport('drivers')}
+          />
+        </div>
+      )}
 
       <div className="glass-panel panel-pad mt-4 md:mt-8 border-l-4 border-l-[#00f2fe]">
         <h3 className="mb-1.5 text-base md:text-lg text-[#00f2fe] font-bold flex items-center gap-2">

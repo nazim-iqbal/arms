@@ -8,13 +8,13 @@ import { today, formatDate, bn } from '../lib/date';
 
 // খরচের ধরণ — তালিকার ক্রম অপরিবর্তিত রাখা হয়েছে
 const EXPENSE_TYPES = [
+  'ভাড়া সমন্বয়',
   'চার্জিং বিল',
   'ব্যাটারি-পানি ক্রয়',
   'বিদ্যুতের মিটার রিচার্জ/বিল পরিশোধ',
   'লিক সারানো',
   'মেরামত',
   'জরিমানা',
-  'ভাড়া সমন্বয়',
   'বিবিধ',
 ];
 
@@ -87,11 +87,11 @@ export default function ExpenseEntry() {
 
   function resetForm() {
     setRickshawId('');
-    setDate(today());
     setAmount('');
     setParticulars('');
     setDetailNote('');
-    // branchId is deliberately kept: the next entry is for the same শাখা
+    // branchId and date are deliberately kept: consecutive entries are for
+    // the same শাখা and the same working day
   }
 
   // ধরণ বদলালে — বিস্তারিত লাগে না এমন কিছু হলে ঘরটি খালি হয়ে যায়
@@ -188,6 +188,23 @@ export default function ExpenseEntry() {
 
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5 items-start">
 
+          {/* Which day the খরচ belongs to. Like the জমা screen this comes
+              first — the entry is often written up the following morning. */}
+          <div className="form-group !mb-0">
+            <label className="form-label">তারিখ (Date)</label>
+            <input
+              type="date"
+              className="form-input font-semibold text-[#00f2fe]"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              max={today()}
+              required
+            />
+            <p className="text-white/45 text-xs mt-1.5">
+              খরচটি যে দিনের, সেই দিনের তারিখ দিন।
+            </p>
+          </div>
+
           {/* কোন শাখার জন্য এই খরচ */}
           <BranchField value={branchId} onChange={setBranchId} />
 
@@ -205,17 +222,6 @@ export default function ExpenseEntry() {
                 </option>
               ))}
             </select>
-          </div>
-
-          <div className="form-group !mb-0">
-            <label className="form-label">তারিখ (Date)</label>
-            <input
-              type="date"
-              className="form-input"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              required
-            />
           </div>
 
           <div className="form-group !mb-0">

@@ -3,8 +3,19 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useBranch } from '../contexts/BranchContext';
 import { BranchField, BranchTag } from '../components/BranchField';
-import { ArrowUpCircle, Trash2, Hash, PiggyBank, Wallet, AlertTriangle, MessageSquare, Plus, User } from 'lucide-react';
+import { ArrowUpCircle, Trash2, Hash, PiggyBank, Wallet, AlertTriangle, MessageSquare, Plus, User, Check, Home } from 'lucide-react';
 import { today, formatDate, bn } from '../lib/date';
+
+/**
+ * A vehicle owes exactly one of these per working day: either the rent came
+ * in, or the vehicle never left the garage. Once one is recorded the vehicle
+ * drops off that date's pending list. A বিবিধ জমা is extra money on top and
+ * deliberately does not close the day.
+ */
+const DAILY_PARTICULARS = 'দৈনিক ভাড়ার জমা';
+const IDLE_PARTICULARS = 'গাড়ি বের হয়নি';
+
+const isIdleRow = (income) => income.income_particulars === IDLE_PARTICULARS;
 
 export default function DepositEntry() {
   // Only an admin may delete; everyone else can add and edit
@@ -24,11 +35,12 @@ export default function DepositEntry() {
   const [rickshawId, setRickshawId] = useState('');
   const [dailyJoma, setDailyJoma] = useState('');      // auto-filled from settings (read only)
   const [date, setDate] = useState(today());
-  const [particulars, setParticulars] = useState('দৈনিক ভাড়ার জমা');
+  const [particulars, setParticulars] = useState(DAILY_PARTICULARS);
   const [cashAmount, setCashAmount] = useState('');    // ক্যাশ জমা (editable)
   const [dueAmount, setDueAmount] = useState('');      // বাকী (auto calculated)
   const [remarks, setRemarks] = useState('');
   const [miscNote, setMiscNote] = useState('');       // "বিবিধ" বেছে নিলে তার বিবরণ
+  const [notOperated, setNotOperated] = useState(false); // সেদিন গাড়ি গ্যারেজেই ছিল
 
   // Filter state
   const [filterRickshawId, setFilterRickshawId] = useState('');
@@ -42,6 +54,22 @@ export default function DepositEntry() {
     ? rickshaws.filter(r => r.branch_id === branchId)
     : rickshaws;
 
+  // Vehicles whose chosen day is already closed — the rent was deposited or
+  // the vehicle was marked as never leaving the garage.
+  const settledIds = new Set(
+    incomes
+      .filter(i => i.date === date &&
+        (i.income_particulars === DAILY_PARTICULARS || isIdleRow(i)))
+      .map(i => i.rickshaw_id)
+  );
+
+  // বিবিধ money can come from a vehicle that has already settled, so that path
+  // keeps the full list. The daily rent path only offers who is still pending.
+  const isMisc = particulars === 'বিবিধ' && !notOperated;
+  const selectableRickshaws = isMisc
+    ? branchRickshaws
+    : branchRickshaws.filter(r => !settledIds.has(r.id));
+
   const selectedRickshaw = rickshaws.find(r => r.id === rickshawId);
   // Whoever currently holds the selected vehicle — any বাকী is charged to them
   const selectedAssignment = assignments.find(a => a.rickshaw_id === rickshawId);
@@ -52,16 +80,17 @@ export default function DepositEntry() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeBranchId]);
 
-  // A vehicle from the old branch must not stay selected after a switch
+  // Switching branch, date or entry type can drop the chosen vehicle out of
+  // the list it was picked from — do not leave a stale selection behind.
   useEffect(() => {
-    if (rickshawId && !branchRickshaws.some(r => r.id === rickshawId)) {
+    if (rickshawId && !selectableRickshaws.some(r => r.id === rickshawId)) {
       setRickshawId('');
       setDailyJoma('');
       setCashAmount('');
       setDueAmount('');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [branchId, rickshaws]);
+  }, [branchId, rickshaws, date, incomes, particulars, notOperated]);
 
   async function fetchData() {
     try {
@@ -146,6 +175,22 @@ export default function DepositEntry() {
     setDueAmount(String(remaining > 0 ? remaining : 0));
   }
 
+  // "এই দিন গাড়ি বের হয়নি" — the day is closed with no money attached to it.
+  // Turning it back off restores the vehicle's normal rate.
+  function toggleNotOperated(next) {
+    setNotOperated(next);
+    setMiscNote('');
+    if (next) {
+      setParticulars(IDLE_PARTICULARS);
+      setDailyJoma('');
+      setCashAmount('');
+      setDueAmount('');
+    } else {
+      setParticulars(DAILY_PARTICULARS);
+      if (rickshawId) handleRickshawChange(rickshawId);
+    }
+  }
+
   // জমার ধরণ বদলালে — "বিবিধ" ছাড়া অন্য কিছু হলে বিবরণের ঘরটি খালি হয়ে যায়
   function handleParticularsChange(value) {
     setParticulars(value);
@@ -153,11 +198,12 @@ export default function DepositEntry() {
   }
 
   function resetForm() {
-    // branchId is deliberately kept: the next entry is for the same শাখা
+    // branchId and date are deliberately kept: a morning's entries are all for
+    // the same শাখা and the same previous working day.
     setRickshawId('');
     setDailyJoma('');
-    setDate(today());
-    setParticulars('দৈনিক ভাড়ার জমা');
+    setNotOperated(false);
+    setParticulars(DAILY_PARTICULARS);
     setCashAmount('');
     setDueAmount('');
     setRemarks('');
@@ -175,16 +221,16 @@ export default function DepositEntry() {
       alert('অনুগ্রহ করে একটি রিক্সা/অটো নির্বাচন করুন।');
       return;
     }
-    if (cashAmount === '') {
+    if (!notOperated && cashAmount === '') {
       alert('ক্যাশ জমার পরিমাণ দিন।');
       return;
     }
-    if (particulars === 'বিবিধ' && !miscNote.trim()) {
+    if (!notOperated && particulars === 'বিবিধ' && !miscNote.trim()) {
       alert('বিবিধ জমার বিবরণ লিখুন।');
       return;
     }
     // Without a driver the বাকী cannot be collected from anyone on the Due Recovery screen
-    if (Number(dueAmount || 0) > 0 && !selectedAssignment) {
+    if (!notOperated && Number(dueAmount || 0) > 0 && !selectedAssignment) {
       const ok = window.confirm(
         'এই গাড়িতে বর্তমানে কোনো ড্রাইভার অ্যাসাইন করা নেই, তাই এই বাকীটি কারো নামে যুক্ত হবে না এবং "Due Recovery" পেজে দেখা যাবে না।\n\nতবুও সংরক্ষণ করবেন?'
       );
@@ -200,12 +246,16 @@ export default function DepositEntry() {
           rickshaw_id: rickshawId,
           driver_id: selectedAssignment?.driver_id || null,
           date,
-          amount: Number(cashAmount),
-          daily_joma_amount: dailyJoma === '' ? null : Number(dailyJoma),
-          due_amount: Number(dueAmount || 0),
-          income_particulars: particulars === 'বিবিধ'
-            ? `বিবিধ — ${miscNote.trim()}`
-            : particulars,
+          // An idle day is stored as a real row of zeros: it closes the date
+          // for this vehicle without touching income or বাকী anywhere else.
+          amount: notOperated ? 0 : Number(cashAmount),
+          daily_joma_amount: notOperated ? 0 : (dailyJoma === '' ? null : Number(dailyJoma)),
+          due_amount: notOperated ? 0 : Number(dueAmount || 0),
+          income_particulars: notOperated
+            ? IDLE_PARTICULARS
+            : particulars === 'বিবিধ'
+              ? `বিবিধ — ${miscNote.trim()}`
+              : particulars,
           remarks: remarks || null,
         }])
         .select(`*, rickshaws(registration_number, identity_no, vehicle_type), drivers(name)`);
@@ -249,7 +299,7 @@ export default function DepositEntry() {
             জমা এন্ট্রি (Deposit)
           </h2>
           <p className="hidden md:block text-white/70 text-sm mt-1">
-            রিক্সা/অটো নির্বাচন করলে তার দৈনিক জমার পরিমাণ স্বয়ংক্রিয়ভাবে চলে আসবে। ক্যাশ জমা কমালে অবশিষ্ট অংশ বাকীতে যোগ হবে।
+            আগে তারিখ দিন — ঐ দিনে যাদের হিসাব এখনো হয়নি কেবল তারাই তালিকায় থাকবে। ক্যাশ জমা কমালে অবশিষ্ট অংশ বাকীতে যোগ হবে।
           </p>
         </div>
         <div className="grid grid-cols-2 md:flex gap-2.5 shrink-0">
@@ -272,10 +322,29 @@ export default function DepositEntry() {
 
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5 items-start">
 
-          {/* 0. Which শাখা is this deposit for */}
+          {/* 0. Which day is being settled. The rent for a night is handed over
+              the next morning, so this is chosen before anything else — every
+              field below is read against it. */}
+          <div className="form-group !mb-0">
+            <label className="form-label">তারিখ (Date)</label>
+            <input
+              type="date"
+              className="form-input font-semibold text-[#00f2fe]"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              max={today()}
+              required
+            />
+            <p className="text-white/45 text-xs mt-1.5">
+              যে দিনের ভাড়া নিচ্ছেন সেই দিনের তারিখ — সকালে গত রাতের জমা নিলে গতকালের তারিখ দিন।
+            </p>
+          </div>
+
+          {/* 1. Which শাখা is this deposit for */}
           <BranchField value={branchId} onChange={setBranchId} />
 
-          {/* 1. Rickshaw dropdown — only the chosen branch's vehicles */}
+          {/* 2. Vehicle — for the daily rent only the ones still pending on
+              that date are listed, so a vehicle disappears once it has paid. */}
           <div className="form-group !mb-0">
             <label className="form-label">রিক্সা নাম্বার (Vehicle)</label>
             <select
@@ -285,113 +354,152 @@ export default function DepositEntry() {
               required
             >
               <option value="">-- রিক্সা/অটো নির্বাচন করুন --</option>
-              {branchRickshaws.map(r => (
+              {selectableRickshaws.map(r => (
                 <option key={r.id} value={r.id}>
                   ID: {r.identity_no || 'N/A'} ({r.vehicle_type || 'Vehicle'}) - {r.registration_number}
                 </option>
               ))}
             </select>
-            {branchId && branchRickshaws.length === 0 && (
+
+            {branchId && branchRickshaws.length === 0 ? (
               <p className="text-amber-400/80 text-xs mt-1.5">এই শাখায় এখনো কোনো গাড়ি যুক্ত করা হয়নি।</p>
+            ) : branchId && !isMisc && (
+              selectableRickshaws.length === 0 ? (
+                <p className="text-emerald-400/90 text-xs mt-1.5 flex items-center gap-1.5">
+                  <Check size={13} /> {formatDate(date)} তারিখের সব গাড়ির হিসাব সম্পন্ন হয়েছে।
+                </p>
+              ) : (
+                <p className="text-white/50 text-xs mt-1.5">
+                  {formatDate(date)} তারিখে হিসাব বাকি{' '}
+                  <span className="text-amber-400 font-bold">{bn(selectableRickshaws.length)}</span>
+                  {' '}টি গাড়ির — যারা জমা দিয়ে দিয়েছে তারা তালিকা থেকে সরে গেছে।
+                </p>
+              )
             )}
           </div>
 
-          {/* 2. Daily joma (auto but editable) */}
-          <div className="form-group !mb-0">
-            <label className="form-label">দৈনিক জমার পরিমাণ (৳)</label>
-            <div className="relative">
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                className="form-input text-emerald-400 font-bold text-lg"
-                value={dailyJoma}
-                onChange={(e) => handleDailyJomaChange(e.target.value)}
-                placeholder={rickshawId ? 'এই গাড়ির দৈনিক জমা সেট করা নেই' : 'রিক্সা সিলেক্ট করলে চলে আসবে'}
-              />
-              <PiggyBank size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-400/50 pointer-events-none" />
-            </div>
-            {rickshawId && dailyJoma === '' && (
-              <p className="text-amber-400/90 text-xs mt-2 flex items-center gap-1.5">
-                <AlertTriangle size={13} /> "Set Daily Deposit" পেজ থেকে এই গাড়ির দৈনিক জমা নির্ধারণ করুন।
-              </p>
-            )}
+          {/* 2b. Some days a vehicle never leaves the garage — driver ill, under
+              repair. Recording that closes the date without any money, so the
+              vehicle stops showing up as pending. */}
+          <div className="md:col-span-2 lg:col-span-3">
+            <button
+              type="button"
+              onClick={() => toggleNotOperated(!notOperated)}
+              aria-pressed={notOperated}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-colors ${
+                notOperated
+                  ? 'bg-amber-500/15 border-amber-500/50'
+                  : 'bg-white/5 border-white/10 md:hover:bg-white/10'
+              }`}
+            >
+              <span
+                className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 ${
+                  notOperated ? 'bg-amber-400 border-amber-400 text-[#0a1738]' : 'border-white/30'
+                }`}
+              >
+                {notOperated && <Check size={14} strokeWidth={3} />}
+              </span>
+              <Home size={18} className={`shrink-0 ${notOperated ? 'text-amber-300' : 'text-white/40'}`} />
+              <span className="min-w-0">
+                <span className={`block text-sm font-semibold ${notOperated ? 'text-amber-300' : 'text-white/80'}`}>
+                  এই দিন গাড়ি বের হয়নি
+                </span>
+                <span className="block text-xs text-white/50">
+                  গ্যারেজেই ছিল — চালক অসুস্থ, মেরামত বা অন্য কারণে। কোনো জমা বা বাকী হিসাবে যুক্ত হবে না।
+                </span>
+              </span>
+            </button>
           </div>
 
-          {/* 3. Date */}
-          <div className="form-group !mb-0">
-            <label className="form-label">তারিখ (Date)</label>
-            <input
-              type="date"
-              className="form-input"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              required
-            />
-          </div>
-
-          {/* 4. Particulars */}
-          <div className="form-group !mb-0">
-            <label className="form-label">জমার ধরণ (Particulars)</label>
-            {/* "বাকী আদায়" lives on the Due Recovery page now — keeping it here
-                too would double-count the money and never reduce the balance. */}
-            <select className="form-input" value={particulars} onChange={(e) => handleParticularsChange(e.target.value)} required>
-              <option value="দৈনিক ভাড়ার জমা">দৈনিক ভাড়ার জমা</option>
-              <option value="বিবিধ">বিবিধ</option>
-            </select>
-          </div>
-
-          {/* 4b. "বিবিধ" বেছে নিলে বিবরণের ঘরটি নিজে থেকেই চলে আসে */}
-          {particulars === 'বিবিধ' && (
+          {/* Money only matters on a day the vehicle actually ran */}
+          {!notOperated && (
+            <>
+            {/* 2. Daily joma (auto but editable) */}
             <div className="form-group !mb-0">
-              <label className="form-label">বিবিধের বিবরণ (কী বাবদ জমা)</label>
+              <label className="form-label">দৈনিক জমার পরিমাণ (৳)</label>
               <div className="relative">
                 <input
                   type="text"
-                  className="form-input pl-11"
-                  value={miscNote}
-                  onChange={(e) => setMiscNote(e.target.value)}
-                  placeholder="যেমনঃ পুরাতন পার্টস বিক্রির অর্থ"
-                  autoFocus
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  className="form-input text-emerald-400 font-bold text-lg"
+                  value={dailyJoma}
+                  onChange={(e) => handleDailyJomaChange(e.target.value)}
+                  placeholder={rickshawId ? 'এই গাড়ির দৈনিক জমা সেট করা নেই' : 'রিক্সা সিলেক্ট করলে চলে আসবে'}
+                />
+                <PiggyBank size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-400/50 pointer-events-none" />
+              </div>
+              {rickshawId && dailyJoma === '' && (
+                <p className="text-amber-400/90 text-xs mt-2 flex items-center gap-1.5">
+                  <AlertTriangle size={13} /> "Set Daily Deposit" পেজ থেকে এই গাড়ির দৈনিক জমা নির্ধারণ করুন।
+                </p>
+              )}
+            </div>
+
+            {/* 4. Particulars */}
+            <div className="form-group !mb-0">
+              <label className="form-label">জমার ধরণ (Particulars)</label>
+              {/* "বাকী আদায়" lives on the Due Recovery page now — keeping it here
+                  too would double-count the money and never reduce the balance. */}
+              <select className="form-input" value={particulars} onChange={(e) => handleParticularsChange(e.target.value)} required>
+                <option value={DAILY_PARTICULARS}>{DAILY_PARTICULARS}</option>
+                <option value="বিবিধ">বিবিধ</option>
+              </select>
+            </div>
+
+            {/* 4b. "বিবিধ" বেছে নিলে বিবরণের ঘরটি নিজে থেকেই চলে আসে */}
+            {particulars === 'বিবিধ' && (
+              <div className="form-group !mb-0">
+                <label className="form-label">বিবিধের বিবরণ (কী বাবদ জমা)</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    className="form-input pl-11"
+                    value={miscNote}
+                    onChange={(e) => setMiscNote(e.target.value)}
+                    placeholder="যেমনঃ পুরাতন পার্টস বিক্রির অর্থ"
+                    autoFocus
+                    required
+                  />
+                  <MessageSquare size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-amber-400/60 pointer-events-none" />
+                </div>
+              </div>
+            )}
+
+            {/* 5. Cash deposit (editable, pre-filled) */}
+            <div className="form-group !mb-0">
+              <label className="form-label">ক্যাশ জমা (৳)</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  className="form-input text-[#00f2fe] font-bold text-lg"
+                  value={cashAmount}
+                  onChange={(e) => handleCashChange(e.target.value)}
+                  placeholder="0"
                   required
                 />
-                <MessageSquare size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-amber-400/60 pointer-events-none" />
+                <Wallet size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#00f2fe]/50 pointer-events-none" />
               </div>
             </div>
+
+            {/* 6. Due (auto) */}
+            <div className="form-group !mb-0">
+              <label className="form-label">বাকী (Auto ৳)</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  className={`form-input bg-white/5 font-bold text-lg cursor-not-allowed ${Number(dueAmount || 0) > 0 ? 'text-amber-400 border-amber-500/40' : 'text-white/60'}`}
+                  value={dueAmount}
+                  readOnly
+                  placeholder="0"
+                />
+                <AlertTriangle size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-amber-400/50 pointer-events-none" />
+              </div>
+            </div>
+            </>
           )}
-
-          {/* 5. Cash deposit (editable, pre-filled) */}
-          <div className="form-group !mb-0">
-            <label className="form-label">ক্যাশ জমা (৳)</label>
-            <div className="relative">
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                className="form-input text-[#00f2fe] font-bold text-lg"
-                value={cashAmount}
-                onChange={(e) => handleCashChange(e.target.value)}
-                placeholder="0"
-                required
-              />
-              <Wallet size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#00f2fe]/50 pointer-events-none" />
-            </div>
-          </div>
-
-          {/* 6. Due (auto) */}
-          <div className="form-group !mb-0">
-            <label className="form-label">বাকী (Auto ৳)</label>
-            <div className="relative">
-              <input
-                type="text"
-                className={`form-input bg-white/5 font-bold text-lg cursor-not-allowed ${Number(dueAmount || 0) > 0 ? 'text-amber-400 border-amber-500/40' : 'text-white/60'}`}
-                value={dueAmount}
-                readOnly
-                placeholder="0"
-              />
-              <AlertTriangle size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-amber-400/50 pointer-events-none" />
-            </div>
-          </div>
 
           {/* 7. Remarks */}
           <div className="form-group !mb-0 md:col-span-2 lg:col-span-3">
@@ -402,7 +510,9 @@ export default function DepositEntry() {
                 className="form-input pl-11"
                 value={remarks}
                 onChange={(e) => setRemarks(e.target.value)}
-                placeholder="যেমনঃ চালক বাকী পরিশোধের প্রতিশ্রুতি দিয়েছে"
+                placeholder={notOperated
+                  ? 'যেমনঃ চালক অসুস্থ ছিলেন / গাড়ি মেরামতে ছিল'
+                  : 'যেমনঃ চালক বাকী পরিশোধের প্রতিশ্রুতি দিয়েছে'}
               />
               <MessageSquare size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
             </div>
@@ -413,9 +523,17 @@ export default function DepositEntry() {
             <button
               type="submit"
               disabled={saving}
-              className="btn bg-[#10B981] hover:bg-[#059669] text-white shadow-[0_4px_15px_rgba(16,185,129,0.3)] sm:px-12 disabled:opacity-60"
+              className={`btn text-white sm:px-12 disabled:opacity-60 ${
+                notOperated
+                  ? 'bg-amber-600 hover:bg-amber-700 shadow-[0_4px_15px_rgba(217,119,6,0.3)]'
+                  : 'bg-[#10B981] hover:bg-[#059669] shadow-[0_4px_15px_rgba(16,185,129,0.3)]'
+              }`}
             >
-              {saving ? 'সংরক্ষণ হচ্ছে...' : 'সংরক্ষণ করুন'}
+              {saving
+                ? 'সংরক্ষণ হচ্ছে...'
+                : notOperated
+                  ? 'বের হয়নি — সংরক্ষণ করুন'
+                  : 'সংরক্ষণ করুন'}
             </button>
           </div>
         </form>
@@ -493,7 +611,13 @@ export default function DepositEntry() {
                     <span className="text-white/45 text-xs font-mono">{formatDate(income.date)}</span>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    <span className="font-bold text-[#10B981] text-base">৳ {bn(income.amount)}</span>
+                    {isIdleRow(income) ? (
+                      <span className="text-[11px] font-bold px-2 py-1 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/30 whitespace-nowrap">
+                        বের হয়নি
+                      </span>
+                    ) : (
+                      <span className="font-bold text-[#10B981] text-base">৳ {bn(income.amount)}</span>
+                    )}
                     {isAdmin && (
                       <button
                       onClick={() => handleDelete(income.id)}
@@ -570,11 +694,19 @@ export default function DepositEntry() {
                         </span>
                       )}
                     </td>
-                    <td className="p-4 text-white/70">{income.income_particulars}</td>
+                    <td className="p-4 text-white/70">
+                      {isIdleRow(income) ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/30 whitespace-nowrap">
+                          <Home size={12} /> গাড়ি বের হয়নি
+                        </span>
+                      ) : income.income_particulars}
+                    </td>
                     <td className="p-4 text-right text-white/60">
                       {income.daily_joma_amount != null ? `৳ ${bn(income.daily_joma_amount)}` : '—'}
                     </td>
-                    <td className="p-4 text-right font-bold text-[#10B981]">৳ {bn(income.amount)}</td>
+                    <td className="p-4 text-right font-bold text-[#10B981]">
+                      {isIdleRow(income) ? <span className="text-white/40 font-normal">—</span> : `৳ ${bn(income.amount)}`}
+                    </td>
                     <td className="p-4 text-right">
                       {Number(income.due_amount || 0) > 0 ? (
                         <span className="inline-flex items-center gap-1 font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 rounded-lg">

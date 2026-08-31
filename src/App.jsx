@@ -179,11 +179,17 @@ const BottomNav = () => (
 
 /**
  * Which শাখা the whole app is looking at.
- * The super admin picks; everyone else just sees their own branch's name,
- * because that is the only branch RLS will hand them rows from.
+ * The super admin picks; an admin just sees their own branch's name, because
+ * that is the only branch RLS will hand them rows from. An entry-only user
+ * sees nothing here — one branch, no choice, nothing to act on.
  */
 const BranchSwitcher = () => {
   const { activeBranches, activeBranchId, setActiveBranchId, canSwitchBranch, activeBranch } = useBranch();
+  const { userRole } = useAuth();
+
+  // An entry-only account has one branch and no say in it, so naming it in
+  // the header on every screen tells them nothing they can act on.
+  if (userRole === 'user') return null;
 
   if (!canSwitchBranch) {
     return (

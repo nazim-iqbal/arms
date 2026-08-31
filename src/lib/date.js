@@ -27,6 +27,52 @@ export function toDateInput(d) {
   return `${year}-${month}-${day}`;
 }
 
+/** First day of the month a YYYY-MM-DD belongs to. */
+export function monthStart(value) {
+  return `${String(value).slice(0, 7)}-01`;
+}
+
+/** Last day of the month a YYYY-MM-DD belongs to. */
+export function monthEnd(value) {
+  const [y, m] = String(value).split('-').map(Number);
+  // Day 0 of the next month is the last day of this one.
+  return toDateInput(new Date(y, m, 0));
+}
+
+/** Shift a YYYY-MM-DD by n whole months, landing on the 1st. */
+export function addMonths(value, n) {
+  const [y, m] = String(value).split('-').map(Number);
+  return toDateInput(new Date(y, m - 1 + n, 1));
+}
+
+/** Every local day from `from` to `to` inclusive, as YYYY-MM-DD. */
+export function eachDay(from, to) {
+  const [y, m, d] = String(from).split('-').map(Number);
+  const cursor = new Date(y, m - 1, d);
+  const out = [];
+  // A month view can never need more than this; the guard keeps a bad
+  // argument from spinning forever.
+  for (let i = 0; i < 400; i++) {
+    const day = toDateInput(cursor);
+    if (day > to) break;
+    out.push(day);
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return out;
+}
+
+/** "সেপ্টেম্বর ২০২৬" — the month a YYYY-MM-DD belongs to. */
+export function monthLabel(value) {
+  const [y, m] = String(value).split('-').map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString('bn-BD', { month: 'long', year: 'numeric' });
+}
+
+/** "শুক্র" — the short Bengali weekday of a YYYY-MM-DD. */
+export function weekdayShort(value) {
+  const [y, m, d] = String(value).split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('bn-BD', { weekday: 'short' });
+}
+
 /** YYYY-MM-DD -> DD/MM/YYYY, easier to scan on a narrow screen. */
 export function formatDate(value) {
   if (!value) return '—';

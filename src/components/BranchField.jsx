@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Building2 } from 'lucide-react';
 import { useBranch } from '../contexts/BranchContext';
+import { useAuth } from '../contexts/AuthContext';
 
 /**
  * "এটি কোন শাখার জন্য?" — the branch picker every entry form carries.
@@ -9,11 +10,16 @@ import { useBranch } from '../contexts/BranchContext';
  *                With "সকল শাখা" in the header there is no sensible default,
  *                so the field starts empty and the form cannot be submitted
  *                until a branch is chosen.
- * admin / user : their own branch, shown but locked. RLS rejects anything
+ * admin        : their own branch, shown but locked. RLS rejects anything
  *                else anyway, so this is a label rather than a restriction.
+ * user         : nothing at all. An entry-only account has exactly one
+ *                branch and cannot change it, so the field is noise on
+ *                every form. The value is still filled in behind the
+ *                scenes, so what gets saved does not change.
  */
 export function BranchField({ value, onChange, label = 'কোন শাখার জন্য? (Branch)' }) {
   const { activeBranches, activeBranchId, canSwitchBranch, byId } = useBranch();
+  const { userRole } = useAuth();
 
   // Follow the header switcher unless the user has already picked something
   useEffect(() => {
@@ -21,6 +27,8 @@ export function BranchField({ value, onChange, label = 'কোন শাখা�
     if (!canSwitchBranch && activeBranchId && value !== activeBranchId) onChange(activeBranchId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeBranchId, canSwitchBranch]);
+
+  if (userRole === 'user') return null;
 
   if (!canSwitchBranch) {
     const b = byId[value || activeBranchId];
