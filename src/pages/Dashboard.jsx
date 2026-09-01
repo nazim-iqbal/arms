@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import {
   today, daysAgo, formatDate, bn,
@@ -11,19 +10,9 @@ import { useAuth } from '../contexts/AuthContext';
 import {
   CarFront, Users, DollarSign, TrendingUp, TrendingDown, Activity,
   X, ChevronRight, RefreshCw, Loader2, AlertTriangle, Wallet, Hash, Phone, Menu, User, HandCoins,
-  Search, CalendarRange, Building2, ArrowUpCircle, ArrowDownCircle, Table2, LayoutGrid,
+  Search, CalendarRange, Building2, Table2, LayoutGrid, Zap, ArrowUpRight, ArrowDownRight, AlertCircle,
   ChevronLeft, CalendarDays
 } from 'lucide-react';
-
-/* ------------------------------------------------------------------ */
-/* Quick actions — the three entry forms, one tap away on a phone      */
-/* without going through the sidebar                                   */
-/* ------------------------------------------------------------------ */
-const QUICK_ACTIONS = [
-  { to: '/deposits',     label: 'Deposit Entry', icon: ArrowUpCircle,   color: 'text-emerald-400', tile: 'bg-emerald-500/10 border-emerald-500/25' },
-  { to: '/expenses',     label: 'Expense Entry', icon: ArrowDownCircle, color: 'text-rose-400',    tile: 'bg-rose-500/10 border-rose-500/25' },
-  { to: '/due-recovery', label: 'Due Recovery',  icon: HandCoins,       color: 'text-amber-400',   tile: 'bg-amber-500/10 border-amber-500/25' },
-];
 
 /* ------------------------------------------------------------------ */
 /* Stat card — tap to open the matching detail report                  */
@@ -72,30 +61,26 @@ const MonthlyTable = ({ rows, loading, error, onRetry, anchor, onPrev, onNext, c
   );
   const totalNet = totals.income - totals.expense;
 
-  // Wide enough that the numbers stay full-size; the table scrolls sideways
-  // on a phone rather than shrinking to unreadable.
-  const num = 'px-3 py-3 md:px-5 md:py-4 text-right tabular-nums whitespace-nowrap text-base md:text-xl font-semibold';
-  const head = 'px-3 py-3 md:px-5 md:py-3.5 text-right whitespace-nowrap text-xs md:text-sm font-bold uppercase tracking-wider';
+  const num = 'px-2 sm:px-3 py-1.5 sm:py-2 text-right tabular-nums whitespace-nowrap text-xs sm:text-sm md:text-base font-semibold';
+  const head = 'px-2 sm:px-3 py-2 sm:py-2.5 text-right whitespace-nowrap text-xs sm:text-sm font-bold uppercase tracking-wider';
 
   return (
-    <div className="flex flex-col gap-3 md:gap-4">
-
-      {/* Month stepper — the next arrow stops at the running month, since
-          there is nothing yet to show beyond it. */}
+    <div className="flex flex-col gap-3 md:gap-4 max-w-4xl mx-auto w-full">
+      {/* Month stepper */}
       <div className="glass-panel flex items-center justify-between gap-2 p-2 md:p-2.5">
         <button
           type="button"
           onClick={onPrev}
           aria-label="আগের মাস"
-          className="p-2.5 md:p-3 rounded-xl bg-white/5 border border-white/10 text-white/70
+          className="p-2 md:p-2.5 rounded-xl bg-white/5 border border-white/10 text-white/70
                      md:hover:bg-white/10 md:hover:text-white active:scale-95 transition-all"
         >
-          <ChevronLeft size={20} />
+          <ChevronLeft size={18} />
         </button>
 
         <div className="flex items-center gap-2 min-w-0">
           <CalendarDays size={18} className="text-[#00f2fe] shrink-0 hidden sm:block" />
-          <span className="text-lg md:text-2xl font-bold text-white truncate">{monthLabel(anchor)}</span>
+          <span className="text-base md:text-xl font-bold text-white truncate">{monthLabel(anchor)}</span>
         </div>
 
         <button
@@ -103,11 +88,11 @@ const MonthlyTable = ({ rows, loading, error, onRetry, anchor, onPrev, onNext, c
           onClick={onNext}
           disabled={!canGoNext}
           aria-label="পরের মাস"
-          className="p-2.5 md:p-3 rounded-xl bg-white/5 border border-white/10 text-white/70
+          className="p-2 md:p-2.5 rounded-xl bg-white/5 border border-white/10 text-white/70
                      md:hover:bg-white/10 md:hover:text-white active:scale-95 transition-all
                      disabled:opacity-25 disabled:cursor-not-allowed disabled:active:scale-100"
         >
-          <ChevronRight size={20} />
+          <ChevronRight size={18} />
         </button>
       </div>
 
@@ -126,8 +111,8 @@ const MonthlyTable = ({ rows, loading, error, onRetry, anchor, onPrev, onNext, c
         <div className="glass-panel py-16 text-center text-white/50">এই মাসের কোনো তথ্য নেই।</div>
       ) : (
         <>
-          {/* The month at a glance, before the day-by-day breakdown */}
-          <div className="grid grid-cols-2 xl:grid-cols-4 gap-2 md:gap-3">
+          {/* Month Overview Mini Tiles */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-3">
             <MoneyTile label="মোট ইনকাম" value={bn(totals.income)} tone="bg-[#10B981]/10 border-[#10B981]/30 text-[#10B981]" />
             <MoneyTile label="মোট খরচ" value={bn(totals.expense)} tone="bg-rose-500/10 border-rose-500/30 text-rose-400" />
             <MoneyTile
@@ -142,11 +127,11 @@ const MonthlyTable = ({ rows, loading, error, onRetry, anchor, onPrev, onNext, c
 
           <div className="glass-panel overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[680px] border-collapse">
+              <table className="w-full table-auto border-collapse">
                 <thead>
                   <tr className="bg-gradient-to-r from-[#00f2fe]/15 via-[#4facfe]/10 to-transparent
                                  border-b-2 border-[#00f2fe]/30 text-white/75">
-                    <th className="px-3 py-3 md:px-5 md:py-3.5 text-left text-xs md:text-sm font-bold uppercase tracking-wider">
+                    <th className="w-20 sm:w-24 md:w-28 px-2 sm:px-3 py-2 sm:py-2.5 text-left text-xs sm:text-sm font-bold uppercase tracking-wider whitespace-nowrap">
                       তারিখ
                     </th>
                     <th className={`${head} text-[#10B981]`}>মোট ইনকাম</th>
@@ -160,8 +145,6 @@ const MonthlyTable = ({ rows, loading, error, onRetry, anchor, onPrev, onNext, c
                   {rows.map((r) => {
                     const net = r.income - r.expense;
                     const isToday = r.date === today();
-                    // A day with no entries reads better as one quiet line than
-                    // as four zeros competing with the days that carry money.
                     const empty = !r.income && !r.expense && !r.due;
                     return (
                       <tr
@@ -172,11 +155,11 @@ const MonthlyTable = ({ rows, loading, error, onRetry, anchor, onPrev, onNext, c
                             : 'even:bg-white/[0.02] md:hover:bg-white/[0.06]'
                         }`}
                       >
-                        <td className="px-3 py-3 md:px-5 md:py-4 whitespace-nowrap">
-                          <div className="flex items-center gap-2.5">
+                        <td className="w-20 sm:w-24 md:w-28 px-2 sm:px-3 py-1.5 sm:py-2 whitespace-nowrap">
+                          <div className="flex items-center gap-1.5">
                             <span
-                              className={`flex items-center justify-center w-9 h-9 md:w-11 md:h-11 rounded-xl shrink-0
-                                          text-lg md:text-2xl font-bold tabular-nums ${
+                              className={`flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg shrink-0
+                                          text-xs sm:text-sm font-bold tabular-nums ${
                                 isToday
                                   ? 'bg-[#00f2fe] text-[#071026]'
                                   : 'bg-white/5 text-white/85'
@@ -185,15 +168,15 @@ const MonthlyTable = ({ rows, loading, error, onRetry, anchor, onPrev, onNext, c
                               {bn(Number(r.date.slice(8, 10)))}
                             </span>
                             <span className="flex flex-col leading-tight">
-                              <span className="text-sm md:text-base text-white/70 font-semibold">{weekdayShort(r.date)}</span>
-                              {isToday && <span className="text-[11px] md:text-xs text-[#00f2fe] font-bold">আজ</span>}
+                              <span className="text-xs sm:text-sm text-white/70 font-semibold">{weekdayShort(r.date)}</span>
+                              {isToday && <span className="text-[10px] text-[#00f2fe] font-bold">আজ</span>}
                             </span>
                           </div>
                         </td>
 
                         {empty ? (
-                          <td className="px-3 py-3 md:px-5 md:py-4 text-center text-white/25 text-sm md:text-base" colSpan={4}>
-                            এই দিনের কোনো এন্ট্রি নেই
+                          <td className="px-2 py-2 text-center text-white/25 text-xs sm:text-sm" colSpan={4}>
+                            কোনো লেনদেন নেই
                           </td>
                         ) : (
                           <>
@@ -214,7 +197,7 @@ const MonthlyTable = ({ rows, loading, error, onRetry, anchor, onPrev, onNext, c
 
                 <tfoot>
                   <tr className="bg-gradient-to-r from-[#00f2fe]/20 to-transparent border-t-2 border-[#00f2fe]/40">
-                    <td className="px-3 py-3.5 md:px-5 md:py-4 text-left whitespace-nowrap text-base md:text-xl font-bold text-white">
+                    <td className="w-20 sm:w-24 md:w-28 px-2 sm:px-3 py-2 sm:py-2.5 text-left whitespace-nowrap text-xs sm:text-sm md:text-base font-bold text-white">
                       মাসের মোট
                     </td>
                     <td className={`${num} !font-bold text-[#10B981]`}>৳ {bn(totals.income)}</td>
@@ -226,9 +209,8 @@ const MonthlyTable = ({ rows, loading, error, onRetry, anchor, onPrev, onNext, c
               </table>
             </div>
 
-            <p className="px-3 md:px-5 py-3 text-xs md:text-sm text-white/45 border-t border-white/10">
+            <p className="px-3 md:px-4 py-2 text-[11px] md:text-xs text-white/45 border-t border-white/10">
               ইনকাম = দৈনিক জমা + বাকী আদায় · বাকী = ঐ দিনে নতুন জমা হওয়া বাকীর পরিমাণ
-              <span className="md:hidden"> · টেবিলটি পাশে স্ক্রল করুন</span>
             </p>
           </div>
         </>
@@ -374,6 +356,222 @@ const REPORTS = {
   drivers: { title: 'ড্রাইভারদের তালিকা', icon: Users },
 };
 
+
+/* ------------------------------------------------------------------ */
+/* ড্যাশবোর্ড-২ (Option A): নগদ ক্যাশ, ক্যাশ-ফ্লো ও সংক্ষিপ্ত আর্থিক ওভারভিউ */
+/* ------------------------------------------------------------------ */
+const DashboardTwo = ({ stats, net, range, openReport }) => {
+  const totalFlow = stats.income + stats.expense;
+  const incomePercent = totalFlow > 0 ? Math.round((stats.income / totalFlow) * 100) : 0;
+  const expensePercent = totalFlow > 0 ? 100 - incomePercent : 0;
+  const profitMargin = stats.income > 0 ? Math.round((net / stats.income) * 100) : 0;
+
+  return (
+    <div className="flex flex-col gap-3.5 md:gap-5 animate-in fade-in duration-200">
+      {/* 1. Cash-Flow & In-Hand Summary Hero Strip */}
+      <div className="glass-panel p-4 sm:p-5 md:p-6 bg-gradient-to-br from-[#10B981]/15 via-[#141419]/90 to-[#00f2fe]/10 border border-[#10B981]/30">
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b border-white/10">
+          <div className="flex items-center gap-2.5">
+            <span className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              <Wallet size={20} />
+            </span>
+            <div>
+              <h3 className="text-sm md:text-base font-bold text-white leading-tight">
+                নগদ ক্যাশ ও লেনদেন সামারি
+              </h3>
+              <p className="text-[11px] text-white/50">{range.label}</p>
+            </div>
+          </div>
+
+          <div className="text-right">
+            <span className="text-[10px] md:text-xs text-white/50 block font-medium">হাতে ক্যাশ (Net In Hand)</span>
+            <span className={`text-lg md:text-2xl font-extrabold tabular-nums ${net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+              ৳ {bn(net)}
+            </span>
+          </div>
+        </div>
+
+        {/* 4-column concise grid on desktop, 2-column on mobile */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3.5 mb-3.5">
+          {/* Total Income */}
+          <button
+            type="button"
+            onClick={() => openReport('income')}
+            className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-left hover:bg-emerald-500/20 transition-all active:scale-[0.98]"
+          >
+            <div className="flex items-center justify-between text-[11px] text-emerald-300 font-semibold mb-1">
+              <span>মোট জমা (Inflow)</span>
+              <ArrowUpRight size={15} className="text-emerald-400" />
+            </div>
+            <div className="text-base md:text-xl font-bold text-white tabular-nums">৳ {bn(stats.income)}</div>
+            {stats.recovered > 0 ? (
+              <div className="text-[10px] text-emerald-400/90 mt-0.5 font-medium">আদায়: ৳ {bn(stats.recovered)}</div>
+            ) : (
+              <div className="text-[10px] text-white/40 mt-0.5">মোট প্রাপ্তি</div>
+            )}
+          </button>
+
+          {/* Total Expense */}
+          <button
+            type="button"
+            onClick={() => openReport('expense')}
+            className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/25 text-left hover:bg-rose-500/20 transition-all active:scale-[0.98]"
+          >
+            <div className="flex items-center justify-between text-[11px] text-rose-300 font-semibold mb-1">
+              <span>মোট খরচ (Outflow)</span>
+              <ArrowDownRight size={15} className="text-rose-400" />
+            </div>
+            <div className="text-base md:text-xl font-bold text-white tabular-nums">৳ {bn(stats.expense)}</div>
+            <div className="text-[10px] text-rose-400/80 mt-0.5 font-medium">দৈনিক খরচ</div>
+          </button>
+
+          {/* New Due */}
+          <button
+            type="button"
+            onClick={() => openReport('income')}
+            className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-left hover:bg-amber-500/20 transition-all active:scale-[0.98]"
+          >
+            <div className="flex items-center justify-between text-[11px] text-amber-300 font-semibold mb-1">
+              <span>নতুন বাকী</span>
+              <AlertCircle size={15} className="text-amber-400" />
+            </div>
+            <div className="text-base md:text-xl font-bold text-white tabular-nums">৳ {bn(stats.newDue)}</div>
+            <div className="text-[10px] text-amber-400/80 mt-0.5 font-medium">{range.label} বাকী</div>
+          </button>
+
+          {/* Due Recovered */}
+          <button
+            type="button"
+            onClick={() => openReport('due')}
+            className="p-3 rounded-xl bg-[#00f2fe]/10 border border-[#00f2fe]/25 text-left hover:bg-[#00f2fe]/20 transition-all active:scale-[0.98]"
+          >
+            <div className="flex items-center justify-between text-[11px] text-[#00f2fe] font-semibold mb-1">
+              <span>বকেয়া আদায়</span>
+              <HandCoins size={15} className="text-[#00f2fe]" />
+            </div>
+            <div className="text-base md:text-xl font-bold text-white tabular-nums">৳ {bn(stats.recovered)}</div>
+            <div className="text-[10px] text-cyan-300/80 mt-0.5 font-medium">আদায়কৃত বাকী</div>
+          </button>
+        </div>
+
+        {/* Visual Income vs Expense Meter */}
+        {totalFlow > 0 && (
+          <div className="pt-2 border-t border-white/10">
+            <div className="flex justify-between text-[11px] text-white/60 mb-1 font-medium">
+              <span className="text-emerald-400 font-semibold">আয় অনুপাত: {incomePercent}%</span>
+              <span className="text-rose-400 font-semibold">ব্যয় অনুপাত: {expensePercent}%</span>
+            </div>
+            <div className="h-2.5 w-full bg-black/40 rounded-full overflow-hidden flex p-0.5 border border-white/5">
+              <div
+                style={{ width: `${incomePercent}%` }}
+                className="bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full transition-all duration-500"
+              />
+              <div
+                style={{ width: `${expensePercent}%` }}
+                className="bg-gradient-to-r from-rose-500 to-rose-400 rounded-full transition-all duration-500"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 2. 2x2 Compact Metric Cards for Fleet, Due & Operations */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 md:gap-4">
+        {/* Outstanding Running Due */}
+        <button
+          type="button"
+          onClick={() => openReport('due')}
+          className="glass-panel p-3.5 md:p-4 text-left border-l-4 border-l-amber-500 hover:border-amber-400 transition-all active:scale-[0.98]"
+        >
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] md:text-xs text-white/50 font-semibold uppercase">চলমান মোট বাকী</span>
+            <HandCoins size={16} className="text-amber-400" />
+          </div>
+          <div className="text-base md:text-2xl font-bold text-amber-400 truncate tabular-nums">
+            ৳ {bn(stats.outstandingDue)}
+          </div>
+          <p className="text-[10px] md:text-xs text-white/50 mt-1 truncate">
+            {stats.debtorCount > 0 ? `${bn(stats.debtorCount)} জন ড্রাইভারের কাছে` : 'কোনো বাকী নেই'}
+          </p>
+        </button>
+
+        {/* Profit Margin */}
+        <button
+          type="button"
+          onClick={() => openReport('profit')}
+          className="glass-panel p-3.5 md:p-4 text-left border-l-4 border-l-blue-500 hover:border-blue-400 transition-all active:scale-[0.98]"
+        >
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] md:text-xs text-white/50 font-semibold uppercase">লাভের হার</span>
+            <TrendingUp size={16} className="text-blue-400" />
+          </div>
+          <div className="text-base md:text-2xl font-bold text-blue-400 truncate tabular-nums">
+            {profitMargin}%
+          </div>
+          <p className="text-[10px] md:text-xs text-white/50 mt-1 truncate">
+            নিট লাভ ৳ {bn(net)}
+          </p>
+        </button>
+
+        {/* Vehicles */}
+        <button
+          type="button"
+          onClick={() => openReport('vehicles')}
+          className="glass-panel p-3.5 md:p-4 text-left border-l-4 border-l-[#00f2fe] hover:border-[#00f2fe] transition-all active:scale-[0.98]"
+        >
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] md:text-xs text-white/50 font-semibold uppercase">গাড়ির অবস্থা</span>
+            <CarFront size={16} className="text-[#00f2fe]" />
+          </div>
+          <div className="text-base md:text-2xl font-bold text-white truncate tabular-nums">
+            {bn(stats.activeRickshaws)} / {bn(stats.totalRickshaws)}
+          </div>
+          <p className="text-[10px] md:text-xs text-[#00f2fe]/80 mt-1 truncate">
+            সচল গাড়ি মাঠে আছে
+          </p>
+        </button>
+
+        {/* Drivers */}
+        <button
+          type="button"
+          onClick={() => openReport('drivers')}
+          className="glass-panel p-3.5 md:p-4 text-left border-l-4 border-l-violet-500 hover:border-violet-400 transition-all active:scale-[0.98]"
+        >
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] md:text-xs text-white/50 font-semibold uppercase">মোট ড্রাইভার</span>
+            <Users size={16} className="text-violet-400" />
+          </div>
+          <div className="text-base md:text-2xl font-bold text-white truncate tabular-nums">
+            {bn(stats.totalDrivers)} জন
+          </div>
+          <p className="text-[10px] md:text-xs text-violet-300/80 mt-1 truncate">
+            রেজিস্টার্ড চালক
+          </p>
+        </button>
+      </div>
+
+      {/* 3. Actionable Alert Banner */}
+      {stats.outstandingDue > 0 && (
+        <div className="glass-panel p-3 md:p-4 bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <AlertCircle size={20} className="text-amber-400 shrink-0" />
+            <div className="min-w-0 text-xs md:text-sm text-amber-200">
+              <span className="font-bold">{bn(stats.debtorCount)} জন ড্রাইভারের কাছে মোট ৳ {bn(stats.outstandingDue)} বকেয়া রয়েছে।</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => openReport('due')}
+            className="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-semibold shrink-0 transition-all"
+          >
+            তালিকা দেখুন
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function Dashboard() {
   // Every figure on this screen belongs to the শাখা chosen in the header
   const { activeBranchId, scopeQuery, activeBranch, isAllBranches } = useBranch();
@@ -403,7 +601,7 @@ export default function Dashboard() {
 
   // থিম-২: the running month broken down day by day. Loaded on its own
   // because it ignores the time-window selector entirely.
-  const [monthlyView, setMonthlyView] = useState(false);
+  const [activeTab, setActiveTab] = useState('classic'); // 'classic' | 'dashboard2' | 'monthly'
   // The 1st of the month on screen; ← → walk it a month at a time
   const [monthAnchor, setMonthAnchor] = useState(() => monthStart(today()));
   const [monthly, setMonthly] = useState({ rows: [], loading: false, error: '' });
@@ -425,9 +623,9 @@ export default function Dashboard() {
   }, [rangeKey, customRange, activeBranchId]);
 
   useEffect(() => {
-    if (monthlyView) fetchMonthly();
+    if (activeTab === 'monthly') fetchMonthly();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [monthlyView, activeBranchId, monthAnchor]);
+  }, [activeTab, activeBranchId, monthAnchor]);
 
   /**
    * One bucket per day of the month on screen. A finished month runs to its
@@ -1050,58 +1248,75 @@ export default function Dashboard() {
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-3 mb-4 md:mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 md:mb-6">
         <h2 className="flex items-center gap-2 text-[#00f2fe] text-lg md:text-3xl font-bold tracking-tight min-w-0">
           <Activity className="w-5 h-5 md:w-8 md:h-8 shrink-0" />
-          <span className="truncate">আজকের ওভারভিউ</span>
+          <span className="truncate">
+            {activeTab === 'dashboard2' ? 'ড্যাশবোর্ড-২ (ক্যাশ ওভারভিউ)' : activeTab === 'monthly' ? 'মাসিক হিসাব (থিম-২)' : 'আজকের ওভারভিউ'}
+          </span>
         </h2>
-        <div className="flex items-center gap-1.5 shrink-0">
-          {/* থিম-২: swaps the cards for the running month, day by day */}
-          <button
-            type="button"
-            onClick={() => setMonthlyView(!monthlyView)}
-            aria-pressed={monthlyView}
-            className={`inline-flex items-center gap-1.5 px-2.5 py-2 md:px-3.5 rounded-lg border text-xs md:text-sm font-semibold transition-colors ${
-              monthlyView
-                ? 'bg-[#00f2fe]/20 border-[#00f2fe]/50 text-[#00f2fe]'
-                : 'bg-white/5 border-white/10 text-white/65 md:hover:bg-white/10 md:hover:text-white'
-            }`}
-          >
-            {monthlyView ? <LayoutGrid size={15} /> : <Table2 size={15} />}
-            {monthlyView ? 'কার্ড ভিউ' : 'থিম-২'}
-          </button>
+
+        <div className="flex items-center gap-2 shrink-0 overflow-x-auto pb-1 sm:pb-0">
+          {/* View Switcher Tabs: ড্যাশবোর্ড, ড্যাশবোর্ড-২, থিম-২ */}
+          <div className="flex items-center gap-1 p-1 rounded-xl bg-white/5 border border-white/10 shrink-0">
+            <button
+              type="button"
+              onClick={() => setActiveTab('classic')}
+              aria-pressed={activeTab === 'classic'}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 md:px-3.5 md:py-2 rounded-lg text-xs md:text-sm font-semibold transition-all ${
+                activeTab === 'classic'
+                  ? 'bg-[#00f2fe]/20 text-[#00f2fe] shadow-[0_0_12px_rgba(0,242,254,0.35)] border border-[#00f2fe]/50'
+                  : 'text-white/60 hover:text-white hover:bg-white/5 border border-transparent'
+              }`}
+            >
+              <LayoutGrid size={15} />
+              <span>ড্যাশবোর্ড</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('dashboard2')}
+              aria-pressed={activeTab === 'dashboard2'}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 md:px-3.5 md:py-2 rounded-lg text-xs md:text-sm font-semibold transition-all ${
+                activeTab === 'dashboard2'
+                  ? 'bg-emerald-500/25 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.4)] border border-emerald-500/50'
+                  : 'text-white/60 hover:text-white hover:bg-white/5 border border-transparent'
+              }`}
+            >
+              <Zap size={15} className={activeTab === 'dashboard2' ? 'text-emerald-400' : ''} />
+              <span>ড্যাশবোর্ড-২</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('monthly')}
+              aria-pressed={activeTab === 'monthly'}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 md:px-3.5 md:py-2 rounded-lg text-xs md:text-sm font-semibold transition-all ${
+                activeTab === 'monthly'
+                  ? 'bg-violet-500/25 text-violet-300 shadow-[0_0_12px_rgba(139,92,246,0.4)] border border-violet-500/50'
+                  : 'text-white/60 hover:text-white hover:bg-white/5 border border-transparent'
+              }`}
+            >
+              <Table2 size={15} />
+              <span className="hidden sm:inline">থিম-২ (মাসিক)</span>
+              <span className="sm:hidden">থিম-২</span>
+            </button>
+          </div>
 
           <button
-            onClick={monthlyView ? fetchMonthly : fetchDashboardData}
-            className="p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors shrink-0"
+            onClick={activeTab === 'monthly' ? fetchMonthly : fetchDashboardData}
+            className="p-2 md:p-2.5 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 transition-colors shrink-0"
             aria-label="রিফ্রেশ"
+            title="রিফ্রেশ করুন"
           >
-            <RefreshCw size={18} />
+            <RefreshCw size={17} />
           </button>
         </div>
       </div>
 
-      {/* The three entry forms — big tap targets so a phone needs no sidebar */}
-      <nav className="grid grid-cols-3 gap-2 sm:gap-3 mb-4 md:mb-5">
-        {QUICK_ACTIONS.map(({ to, label, icon: Icon, color, tile }) => (
-          <Link
-            key={to}
-            to={to}
-            aria-label={label}
-            className={`glass-panel flex flex-col items-center justify-center gap-1.5 px-2 py-3.5 sm:py-4
-                        ${tile} active:scale-[0.97]`}
-          >
-            <Icon className={`w-7 h-7 sm:w-8 sm:h-8 shrink-0 ${color}`} />
-            <span className="text-[11px] sm:text-sm font-semibold text-white/85 text-center leading-tight">
-              {label}
-            </span>
-          </Link>
-        ))}
-      </nav>
-
       {/* The window picker drives the cards only — থিম-২ is always the
           running month, so offering a window next to it would mislead. */}
-      {!monthlyView && (
+      {activeTab !== 'monthly' && (
         <>
         {/* Time-window selector — scrolls sideways on narrow phones */}
         <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-3 px-3 sm:mx-0 sm:px-0 sm:flex-wrap">
@@ -1180,7 +1395,7 @@ export default function Dashboard() {
       )}
 
       <p className="text-white/45 text-xs md:text-sm mt-1 mb-3 md:mb-4">
-        {monthlyView ? (
+        {activeTab === 'monthly' ? (
           <>
             মাসের দৈনিক হিসাব · ← → দিয়ে আগের বা পরের মাসে যান।
           </>
@@ -1196,7 +1411,7 @@ export default function Dashboard() {
         )}
       </p>
 
-      {monthlyView ? (
+      {activeTab === 'monthly' ? (
         <MonthlyTable
           rows={monthly.rows}
           loading={monthly.loading}
@@ -1207,8 +1422,15 @@ export default function Dashboard() {
           onNext={() => canGoNextMonth && setMonthAnchor(addMonths(monthAnchor, 1))}
           canGoNext={canGoNextMonth}
         />
+      ) : activeTab === 'dashboard2' ? (
+        <DashboardTwo
+          stats={stats}
+          net={net}
+          range={range}
+          openReport={openReport}
+        />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5 md:gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5 md:gap-5 animate-in fade-in duration-200">
           <StatCard
             title={`মোট ইনকাম (${range.label})`}
             value={`৳ ${bn(stats.income)}`}

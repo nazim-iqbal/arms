@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useBranch } from '../contexts/BranchContext';
 import { BranchField, BranchTag } from '../components/BranchField';
+import { DateField } from '../components/DateField';
 import { ArrowUpCircle, Trash2, Hash, PiggyBank, Wallet, AlertTriangle, MessageSquare, Plus, User, Check, Home } from 'lucide-react';
 import { today, formatDate, bn } from '../lib/date';
 
@@ -325,20 +326,14 @@ export default function DepositEntry() {
           {/* 0. Which day is being settled. The rent for a night is handed over
               the next morning, so this is chosen before anything else — every
               field below is read against it. */}
-          <div className="form-group !mb-0">
-            <label className="form-label">তারিখ (Date)</label>
-            <input
-              type="date"
-              className="form-input font-semibold text-[#00f2fe]"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              max={today()}
-              required
-            />
-            <p className="text-white/45 text-xs mt-1.5">
-              যে দিনের ভাড়া নিচ্ছেন সেই দিনের তারিখ — সকালে গত রাতের জমা নিলে গতকালের তারিখ দিন।
-            </p>
-          </div>
+          <DateField
+            label="তারিখ (Date)"
+            value={date}
+            onChange={setDate}
+            max={today()}
+            required
+            helperText="যে দিনের ভাড়া নিচ্ছেন সেই দিনের তারিখ — সকালে গত রাতের জমা নিলে গতকালের তারিখ দিন।"
+          />
 
           {/* 1. Which শাখা is this deposit for */}
           <BranchField value={branchId} onChange={setBranchId} />

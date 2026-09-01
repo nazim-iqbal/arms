@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useBranch } from '../contexts/BranchContext';
 import { BranchField, BranchTag } from '../components/BranchField';
+import { DateField } from '../components/DateField';
 import { ArrowDownCircle, Trash2, Plus, Receipt, MessageSquare } from 'lucide-react';
 import { today, formatDate, bn } from '../lib/date';
 
@@ -190,20 +191,14 @@ export default function ExpenseEntry() {
 
           {/* Which day the খরচ belongs to. Like the জমা screen this comes
               first — the entry is often written up the following morning. */}
-          <div className="form-group !mb-0">
-            <label className="form-label">তারিখ (Date)</label>
-            <input
-              type="date"
-              className="form-input font-semibold text-[#00f2fe]"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              max={today()}
-              required
-            />
-            <p className="text-white/45 text-xs mt-1.5">
-              খরচটি যে দিনের, সেই দিনের তারিখ দিন।
-            </p>
-          </div>
+          <DateField
+            label="তারিখ (Date)"
+            value={date}
+            onChange={setDate}
+            max={today()}
+            required
+            helperText="খরচটি যে দিনের, সেই দিনের তারিখ দিন।"
+          />
 
           {/* কোন শাখার জন্য এই খরচ */}
           <BranchField value={branchId} onChange={setBranchId} />

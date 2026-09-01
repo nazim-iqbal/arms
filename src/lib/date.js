@@ -19,6 +19,16 @@ export function daysAgo(n) {
   return toDateInput(d);
 }
 
+/** Shift a YYYY-MM-DD by n days (e.g. -1 for previous day, +1 for next day). */
+export function addDays(value, n) {
+  if (!value) return today();
+  const [y, m, d] = String(value).split('-').map(Number);
+  if (isNaN(y) || isNaN(m) || isNaN(d)) return today();
+  const date = new Date(y, m - 1, d);
+  date.setDate(date.getDate() + n);
+  return toDateInput(date);
+}
+
 /** Format a Date as YYYY-MM-DD (the value format <input type="date"> expects). */
 export function toDateInput(d) {
   const year = d.getFullYear();

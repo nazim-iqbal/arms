@@ -133,47 +133,101 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
 };
 
 /**
- * Phone-only bottom bar. The dashboard plus the three money screens stay
- * within thumb reach, so an entry user never has to open the sidebar.
- * Hidden from lg upwards, where the sidebar is always on screen anyway.
+ * Phone-only bottom bar. Enhanced with distinct vibrant color schemes
+ * for each tab (Cyan, Emerald, Rose, Amber) and glowing active states.
  */
 const BOTTOM_NAV = [
-  { to: '/',             icon: LayoutDashboard,  label: 'ড্যাশবোর্ড' },
-  { to: '/deposits',     icon: ArrowUpCircle,    label: 'জমা' },
-  { to: '/expenses',     icon: ArrowDownCircle,  label: 'খরচ' },
-  { to: '/due-recovery', icon: HandCoins,        label: 'বকেয়া' },
+  {
+    to: '/',
+    icon: LayoutDashboard,
+    label: 'ড্যাশবোর্ড',
+    activeText: 'text-[#00f2fe]',
+    activeBg: 'bg-[#00f2fe]/15',
+    activeBorder: 'border-[#00f2fe]/40',
+    indicatorBg: 'bg-[#00f2fe]',
+    glowColor: 'rgba(0, 242, 254, 0.4)',
+  },
+  {
+    to: '/deposits',
+    icon: ArrowUpCircle,
+    label: 'জমা',
+    activeText: 'text-emerald-400',
+    activeBg: 'bg-emerald-500/15',
+    activeBorder: 'border-emerald-500/40',
+    indicatorBg: 'bg-emerald-400',
+    glowColor: 'rgba(16, 185, 129, 0.4)',
+  },
+  {
+    to: '/expenses',
+    icon: ArrowDownCircle,
+    label: 'খরচ',
+    activeText: 'text-rose-400',
+    activeBg: 'bg-rose-500/15',
+    activeBorder: 'border-rose-500/40',
+    indicatorBg: 'bg-rose-400',
+    glowColor: 'rgba(244, 63, 94, 0.4)',
+  },
+  {
+    to: '/due-recovery',
+    icon: HandCoins,
+    label: 'বকেয়া',
+    activeText: 'text-amber-400',
+    activeBg: 'bg-amber-500/15',
+    activeBorder: 'border-amber-500/40',
+    indicatorBg: 'bg-amber-400',
+    glowColor: 'rgba(245, 158, 11, 0.4)',
+  },
 ];
 
 const BottomNav = () => (
   <nav
-    className="lg:hidden fixed bottom-0 inset-x-0 z-30 flex
-               bg-[#0a1738]/95 backdrop-blur-md border-t border-[#1e3a8a]/60
-               shadow-[0_-4px_20px_-6px_rgba(0,0,0,0.8)] pb-[env(safe-area-inset-bottom)]"
+    aria-label="Mobile Navigation"
+    className="lg:hidden fixed bottom-0 inset-x-0 z-40
+               bg-[#0a0d18]/95 backdrop-blur-2xl border-t border-white/[0.12]
+               shadow-[0_-8px_30px_rgba(0,0,0,0.85)] pb-[max(0.4rem,env(safe-area-inset-bottom))] pt-1 px-2"
   >
-    {BOTTOM_NAV.map(({ to, icon: Icon, label }) => (
-      <NavLink
-        key={to}
-        to={to}
-        end={to === '/'}
-        className={({ isActive }) =>
-          `flex-1 flex flex-col items-center gap-0.5 pt-1 pb-1.5 text-[11px] font-semibold
-           transition-colors active:bg-white/5 ${isActive ? 'text-[#00f2fe]' : 'text-slate-400'}`
-        }
-      >
-        {({ isActive }) => (
-          <>
-            {/* Thin cap that lights up on the screen you are standing on */}
-            <span
-              className={`h-[3px] w-8 rounded-full transition-all duration-300 ${
-                isActive ? 'bg-[#00f2fe] shadow-[0_0_8px_rgba(0,242,254,0.8)]' : 'bg-transparent'
+    <div className="flex items-center justify-around max-w-md mx-auto">
+      {BOTTOM_NAV.map(({ to, icon: Icon, label, activeText, activeBg, activeBorder, indicatorBg, glowColor }) => (
+        <NavLink
+          key={to}
+          to={to}
+          end={to === '/'}
+          className={({ isActive }) =>
+            `relative flex-1 flex flex-col items-center justify-center py-1 px-1 rounded-2xl transition-all duration-200 active:scale-95 ${
+              isActive ? `${activeText} font-bold` : 'text-slate-400 hover:text-slate-200'
+            }`
+          }
+        >
+          {({ isActive }) => (
+            <div
+              className={`w-full flex flex-col items-center gap-0.5 py-1 px-1.5 rounded-xl transition-all duration-300 ${
+                isActive
+                  ? `${activeBg} ${activeBorder} border shadow-lg`
+                  : 'border border-transparent'
               }`}
-            />
-            <Icon size={21} className="shrink-0" />
-            <span>{label}</span>
-          </>
-        )}
-      </NavLink>
-    ))}
+              style={isActive ? { boxShadow: `0 0 16px ${glowColor}` } : {}}
+            >
+              {/* Top tiny glowing pill indicator */}
+              <span
+                className={`h-[3px] rounded-full transition-all duration-300 ${
+                  isActive ? `w-5 ${indicatorBg}` : 'w-0 bg-transparent'
+                }`}
+                style={isActive ? { boxShadow: `0 0 8px ${glowColor}` } : {}}
+              />
+              <Icon
+                size={21}
+                className={`shrink-0 transition-transform duration-200 ${
+                  isActive ? 'scale-110 stroke-[2.4]' : 'stroke-[1.8]'
+                }`}
+              />
+              <span className="text-[11px] leading-tight font-medium tracking-tight">
+                {label}
+              </span>
+            </div>
+          )}
+        </NavLink>
+      ))}
+    </div>
   </nav>
 );
 

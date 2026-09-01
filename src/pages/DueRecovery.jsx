@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useBranch } from '../contexts/BranchContext';
 import { BranchField, BranchTag } from '../components/BranchField';
+import { DateField } from '../components/DateField';
 import { today, formatDate, bn } from '../lib/date';
 import { buildDueBalances, listDebtors, orphanDue as sumOrphanDue } from '../lib/due';
 import {
@@ -309,16 +310,13 @@ export default function DueRecovery() {
           </div>
 
           {/* 5. Date */}
-          <div className="form-group !mb-0">
-            <label className="form-label">জমার তারিখ (Date)</label>
-            <input
-              type="date"
-              className="form-input"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              required
-            />
-          </div>
+          <DateField
+            label="জমার তারিখ (Date)"
+            value={date}
+            onChange={setDate}
+            max={today()}
+            required
+          />
 
           {/* 6. Remarks */}
           <div className="form-group !mb-0">
